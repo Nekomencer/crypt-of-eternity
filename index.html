@@ -67,7 +67,7 @@
     background: var(--panel); flex-shrink: 0;
   }
   #top-bar .logo { color: var(--gold); font-size: 9px; }
-  #floor-info    { color: var(--gold); font-size: 9px; letter-spacing: 1px; }
+  #floor-info    { color: var(--gold); font-size: 11px; letter-spacing: 1px; }
 
   #main-area { display: flex; width: 100%; flex: 1; overflow: hidden; }
 
@@ -92,7 +92,7 @@
   .bar-exp   { background: var(--purple); }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .stat-cell { background: #1a1a24; border: 1px solid var(--border); padding: 4px; display: flex; flex-direction: column; gap: 1px; }
-  .stat-cell .lbl { font-size: 7px; color: var(--dim); }
+  .stat-cell .lbl { font-size: 8px; color: var(--dim); }
   .stat-cell .val { font-size: 14px; color: var(--white); font-family: var(--font-log); }
 
   .skill-slot {
@@ -110,7 +110,7 @@
   .equip-slot { display: flex; align-items: center; gap: 6px; background: #1a1a24; border: 1px solid var(--border); padding: 5px 6px; }
   .equip-icon { font-size: 14px; }
   .equip-info { flex: 1; }
-  .equip-lbl  { font-size: 7px; color: var(--dim); }
+  .equip-lbl  { font-size: 8px; color: var(--dim); }
   .equip-name { font-size: 13px; color: var(--white); font-family: var(--font-log); }
   .equip-stat { font-size: 13px; color: var(--green); font-family: var(--font-log); }
 
@@ -126,7 +126,7 @@
   #log-area::-webkit-scrollbar { width: 4px; }
   #log-area::-webkit-scrollbar-track { background: var(--panel); }
   #log-area::-webkit-scrollbar-thumb { background: var(--border); }
-  .log-entry  { font-family: var(--font-log); font-size: 15px; line-height: 1.3; padding: 1px 2px; color: var(--white); }
+  .log-entry  { font-family: var(--font-log); font-size: 13px; line-height: 1.3; padding: 1px 2px; color: var(--white); }
   .log-entry.dmg   { color: var(--red); }
   .log-entry.heal  { color: var(--green); }
   .log-entry.gold  { color: var(--gold); }
@@ -181,7 +181,7 @@
   .merchant-icon  { font-size:20px; }
   .merchant-info  { flex:1; display:flex; flex-direction:column; gap:2px; }
   .merchant-name  { font-size:8px; color:var(--white); }
-  .merchant-stat  { font-size:13px; color:var(--green); font-family:var(--font-log); }
+  .merchant-stat  { font-size:11px; color:var(--green); font-family:var(--font-log); }
   .merchant-price { font-size:8px; color:var(--gold); }
   .merchant-cant  { opacity:0.4; cursor:not-allowed; }
 
@@ -333,8 +333,8 @@
 // ============================================================
 
 // ── GLOBAL CONSTANTS ─────────────────────────────────────────
-const TS      = 48;   // tile pixel size (Minecraft Dungeons feel)
-const WALL_H  = 18;   // extra pixels of wall face shown above tile (fake 3D depth)
+const TS           = 32;   // tile pixel size
+const WALL_FACE_H  = 10;   // south-face overdraw height (fake 3D depth)
 const COLS    = 42;    // wider world map
 const ROWS    = 30;    // taller world map
 const INV_MAX = 20;
@@ -347,64 +347,57 @@ const T = { WALL:0, FLOOR:1, STAIRS:3, EXIT:4 };
 
 // ── COLOUR PALETTE ────────────────────────────────────────────
 const PAL = {
-  // Floors — cobblestone gray
-  floorA:      '#4a4a52',
-  floorB:      '#424248',
-  floorJoint:  '#2e2e34',
-  floorMoss:   '#3a4a30',
-  floorDark:   '#38383e',
+  floorA:       '#4a4a52',
+  floorB:       '#424248',
+  floorLine:    '#2e2e34',
+  floorMoss:    '#3a4a30',
+  floorDark:    '#38383e',
 
-  // Walls — deep stone with blue-gray cast
-  wallTop:     '#5a5870',
-  wallFace:    '#38364a',
-  wallShadow:  '#1e1c28',
-  wallMortar:  '#2a2838',
-  wallEdge:    '#6a6880',
+  wallTop:      '#5a5870',
+  wallDark:     '#2e2c3e',
+  wallLit:      '#3e3c50',
+  wallMortar:   '#222030',
 
-  // Torchlight
-  torchOrange: '#ff8c00',
-  torchYellow: '#ffcc44',
-  torchGlow:   'rgba(255,160,30,0.22)',
+  torchOrange:  '#ff8c00',
+  torchYellow:  '#ffcc44',
+  torchGlow:    'rgba(255,160,30,0.28)',
 
-  // Stairs / exit
-  stairBg:     '#1a1a2e',
-  stairGlow:   'rgba(76,201,240,0.25)',
-  stairColor:  '#4cc9f0',
-  exitGlow:    'rgba(245,200,66,0.35)',
-  exitColor:   '#f5c842',
+  stairBg:      '#1a1a2e',
+  stairGlow:    'rgba(76,201,240,0.25)',
+  stairColor:   '#4cc9f0',
+  exitGlow:     'rgba(245,200,66,0.35)',
+  exitColor:    '#f5c842',
 
-  // Fog
-  fogExplored: 'rgba(12,10,22,0.58)',
+  fogDark:      'rgba(12,10,22,0.62)',
 
-  // Entities — Minecraft-style block colors
-  playerBody:  '#5b8dd9',
-  playerSkin:  '#f0c080',
-  playerHair:  '#3a2010',
-  playerSword: '#c0d8f0',
-  playerGlow:  'rgba(91,141,217,0.20)',
+  playerBody:   '#5b8dd9',
+  playerSkin:   '#f0c080',
+  playerHair:   '#3a2010',
+  playerSword:  '#c0d8f0',
+  playerGlow:   'rgba(91,141,217,0.18)',
 
-  goblin:      '#4a9a50',
-  orc:         '#7a4a20',
-  skeleton:    '#c8c8b0',
-  troll:       '#7040a0',
-  demon:       '#c02020',
+  goblin:       '#4a9a50',
+  orc:          '#7a4a20',
+  skeleton:     '#c8c8b0',
+  troll:        '#7040a0',
+  demon:        '#c02020',
 
-  hpHigh:      '#44cc44',
-  hpMid:       '#ccaa00',
-  hpLow:       '#cc3333',
+  hpHigh:       '#44cc44',
+  hpMid:        '#ccaa00',
+  hpLow:        '#cc3333',
 
-  chestWood:   '#8b5e1a',
-  chestLid:    '#c89a30',
-  chestGem:    '#4cc9f0',
-  chestOpen:   '#3a2808',
+  chestWood:    '#8b5e1a',
+  chestLid:     '#c89a30',
+  chestGem:     '#4cc9f0',
+  chestOpen:    '#3a2808',
 
   merchantRobe: '#1e3a5a',
   merchantSkin: '#f0c080',
   merchantHat:  '#4cc9f0',
   merchantGold: '#f5c842',
 
-  shadow:      'rgba(0,0,0,0.45)',
-  vignette:    'rgba(0,0,0,0.72)',
+  shadow:       'rgba(0,0,0,0.45)',
+  vignette:     'rgba(0,0,0,0.72)',
 };
 
 function floorTint(floor) {
@@ -415,12 +408,12 @@ function floorTint(floor) {
 }
 
 // ============================================================
-//  TorchSystem — static wall torches with flickering light
+//  TorchSystem — wall torches with radial glow + pixel flame
 // ============================================================
 const TorchSystem = {
   torches: [],
 
-  generate(rooms) {
+  generate() {
     this.torches = [];
     for (let ty = 1; ty < ROWS - 1; ty++) {
       for (let tx = 1; tx < COLS - 1; tx++) {
@@ -440,36 +433,36 @@ const TorchSystem = {
       if (!FogOfWar.isVisible(torch.x, torch.y)) continue;
       const { sx, sy } = Camera.toScreen(torch.x, torch.y);
       if (sx < -TS * 3 || sy < -TS * 3 || sx > Camera.vw + TS * 3 || sy > Camera.vh + TS * 3) continue;
-
       const flicker = 0.85 + 0.15 * Math.sin(t * 7 + torch.phase);
-
-      // Torch body on wall face
-      const tx2 = sx + TS / 2, ty2 = sy + WALL_H + 4;
-      ctx.fillStyle = '#6a4010'; ctx.fillRect(tx2 - 2, ty2, 4, 8);
-      ctx.fillStyle = PAL.torchOrange; ctx.fillRect(tx2 - 3, ty2 - 2, 6, 4);
-
-      // Flame
-      ctx.save();
-      ctx.globalAlpha = flicker;
-      ctx.fillStyle = PAL.torchYellow;
-      ctx.beginPath();
-      ctx.ellipse(tx2, ty2 - 4, 3, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.ellipse(tx2, ty2 - 5, 1.5, 2.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Light cone on floor below
-      const ly = sy + TS;
-      const g = ctx.createRadialGradient(tx2, ly, 0, tx2, ly, TS * 2.2 * flicker);
-      g.addColorStop(0, 'rgba(255,160,30,0.18)');
+      const cx = sx + TS / 2;
+      // Tiny pixel flame at the base of the south face
+      const fy = sy + TS - WALL_FACE_H - 2;
+      ctx.fillStyle = PAL.torchOrange; ctx.fillRect(cx - 2, fy, 4, 4);
+      ctx.fillStyle = PAL.torchYellow; ctx.fillRect(cx - 1, fy - 2, 2, 3);
+      // Radial glow centred on the floor below the torch
+      const gx = cx, gy = sy + TS;
+      const r = TS * 2.5 * flicker;
+      const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+      g.addColorStop(0, 'rgba(255,160,30,0.20)');
       g.addColorStop(0.5, 'rgba(255,120,10,0.08)');
       g.addColorStop(1, 'transparent');
+      ctx.save();
+      ctx.globalAlpha = flicker;
       ctx.fillStyle = g;
-      ctx.fillRect(sx - TS * 1.5, ly, TS * 4, TS * 2);
+      ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+      ctx.restore();
     }
+  },
+
+  drawPlayerLight(ctx) {
+    const ps = AnimSystem.playerScreen();
+    const px = ps.sx + TS / 2, py = ps.sy + TS / 2;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, TS * 3.5);
+    g.addColorStop(0, 'rgba(220,220,255,0.10)');
+    g.addColorStop(0.5, 'rgba(180,180,255,0.05)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, Camera.vw, Camera.vh);
   }
 };
 
@@ -564,11 +557,10 @@ const Player = {
     const {item,rarity}=this.inventory[i];
     const slot=item.type==='weapon'?'weapon':item.type==='armor'?'armor':null;
     if(!slot) return;
-    if(this.equipment[slot] && this.inventory.length>=INV_MAX){
-      Logger.add('Inventory full — unequip first!','warn'); return;
-    }
-    if(this.equipment[slot]) this.addItem(this.equipment[slot].item, this.equipment[slot].rarity);
-    this.equipment[slot]={item,rarity}; this.removeItem(i);
+    const old=this.equipment[slot];
+    this.equipment[slot]={item,rarity};
+    this.removeItem(i);
+    if(old) this.addItem(old.item,old.rarity);
   },
   useItem(i) {
     const {item}=this.inventory[i];
@@ -976,48 +968,30 @@ const TilePainter = {
   floor(ctx,sx,sy,W,H,alt){
     const t=this._cached(`floor_${W}_${H}_${alt}`,W,H,(c,w,h)=>{
       c.fillStyle = alt ? PAL.floorB : PAL.floorA;
-      c.fillRect(0, 0, w, h);
-
-      // Cobblestone block pattern — 2 rows of offset stones
-      const stones = alt
-        ? [{x:1,y:1,w:w*0.55,h:h*0.48},{x:w*0.57,y:1,w:w*0.41,h:h*0.48},
-           {x:1,y:h*0.52,w:w*0.38,h:h*0.46},{x:w*0.41,y:h*0.52,w:w*0.57,h:h*0.46}]
-        : [{x:1,y:1,w:w*0.45,h:h*0.48},{x:w*0.47,y:1,w:w*0.51,h:h*0.48},
-           {x:1,y:h*0.52,w:w*0.62,h:h*0.46},{x:w*0.64,y:h*0.52,w:w*0.34,h:h*0.46}];
-
-      for (const s of stones) {
-        c.fillStyle = alt ? PAL.floorDark : PAL.floorA;
-        c.fillRect(s.x + 1, s.y + 1, s.w - 2, s.h - 2);
-        c.fillStyle = 'rgba(255,255,255,0.07)';
-        c.fillRect(s.x + 1, s.y + 1, s.w - 2, 1);
-        c.fillRect(s.x + 1, s.y + 1, 1, s.h - 2);
-        c.fillStyle = 'rgba(0,0,0,0.18)';
-        c.fillRect(s.x + 1, s.y + s.h - 2, s.w - 2, 1);
-      }
-      // Grout lines
-      c.strokeStyle = PAL.floorJoint;
-      c.lineWidth = 1;
-      for (const s of stones) c.strokeRect(s.x + 0.5, s.y + 0.5, s.w - 1, s.h - 1);
-
-      // Moss patch on ~30% of tiles
-      if ((alt ? 7 : 3) % 10 < 3) {
+      c.fillRect(0,0,w,h);
+      // Two horizontal stone slabs per tile
+      const mid = Math.floor(h/2);
+      // Top slab highlight
+      c.fillStyle = 'rgba(255,255,255,0.05)';
+      c.fillRect(1,1,w-2,mid-2);
+      c.fillStyle = 'rgba(0,0,0,0.12)';
+      c.fillRect(1,mid-2,w-2,1);
+      // Bottom slab shadow
+      c.fillStyle = 'rgba(0,0,0,0.08)';
+      c.fillRect(1,mid+1,w-2,h-mid-2);
+      // Horizontal grout line
+      c.fillStyle = PAL.floorLine;
+      c.fillRect(0,mid,w,1);
+      // Vertical grout — offset between rows
+      const vx = alt ? Math.floor(w*0.55) : Math.floor(w*0.40);
+      c.fillRect(vx,1,1,mid-1);
+      c.fillRect(w-vx,mid+1,1,h-mid-2);
+      // Subtle moss on alt tiles
+      if(alt){
         c.fillStyle = PAL.floorMoss;
-        c.globalAlpha = 0.25;
-        c.beginPath();
-        c.ellipse(w * 0.7, h * 0.65, w * 0.12, h * 0.1, 0, 0, Math.PI * 2);
-        c.fill();
+        c.globalAlpha = 0.18;
+        c.fillRect(Math.floor(w*0.58),Math.floor(h*0.60),Math.floor(w*0.16),Math.floor(h*0.14));
         c.globalAlpha = 1;
-      }
-
-      // Rubble decals on ~12% of tiles
-      const seed = alt ? 13 : 7;
-      if (seed % 9 < 1.1) {
-        c.fillStyle = 'rgba(120,100,80,0.30)';
-        for (let i = 0; i < 3; i++) {
-          const rx = (seed * 37 + i * 17) % (w - 4) + 2;
-          const ry = (seed * 23 + i * 11) % (h - 4) + 2;
-          c.fillRect(rx, ry, 2, 2);
-        }
       }
     });
     ctx.drawImage(t,sx,sy);
@@ -1025,50 +999,44 @@ const TilePainter = {
 
   // ── WALL ──────────────────────────────────────────────────
   wall(ctx,sx,sy,W,H,hasFloorS){
-    const t=this._cached(`wall_${W}_${H}_${hasFloorS?1:0}`,W,H+WALL_H,(c,w,h)=>{
-      // TOP FACE (lit from above)
+    const t=this._cached(`wall_${W}_${H}`,W,H,(c,w,h)=>{
+      // Main face (dark)
+      c.fillStyle = PAL.wallDark;
+      c.fillRect(0,0,w,h);
+      // Top lit edge
       c.fillStyle = PAL.wallTop;
-      c.fillRect(0, 0, w, WALL_H);
-      c.strokeStyle = PAL.wallEdge; c.lineWidth = 0.5;
-      c.beginPath(); c.moveTo(0, WALL_H); c.lineTo(w, WALL_H); c.stroke();
-      c.fillStyle = 'rgba(255,255,255,0.10)';
-      c.fillRect(0, 0, w, 2);
-
-      // FRONT FACE
-      const fy = WALL_H;
-      const fh = h - WALL_H;
-      c.fillStyle = PAL.wallFace;
-      c.fillRect(0, fy, w, fh);
-
-      // Brick rows on front face
-      const bh = Math.max(6, Math.floor(fh / 3));
-      const bw = Math.max(8, Math.floor(w / 2));
-      for (let row = 0; row < 3; row++) {
-        const rowY = fy + row * bh;
-        const offset = (row % 2 === 0) ? 0 : bw / 2;
-        for (let bx = -offset; bx < w; bx += bw) {
-          c.fillStyle = row % 2 === 0 ? PAL.wallFace : PAL.wallShadow;
-          if (bx + 1 >= 0 && bx + bw - 2 <= w)
-            c.fillRect(bx + 1, rowY + 1, bw - 2, bh - 2);
-        }
-      }
-      // Mortar lines
+      c.fillRect(0,0,w,3);
+      c.fillStyle = 'rgba(255,255,255,0.08)';
+      c.fillRect(0,0,w,1);
+      // Mortar horizontal lines
       c.strokeStyle = PAL.wallMortar; c.lineWidth = 1;
-      for (let row = 0; row < 4; row++) {
-        c.beginPath();
-        c.moveTo(0, fy + row * bh); c.lineTo(w, fy + row * bh);
-        c.stroke();
+      const bh = Math.max(6,Math.floor(h/3));
+      for(let row=1;row<4;row++){
+        c.beginPath(); c.moveTo(0,row*bh); c.lineTo(w,row*bh); c.stroke();
       }
-      // Left shadow edge
-      c.fillStyle = PAL.wallShadow;
-      c.fillRect(0, fy, 2, fh);
-      // Bottom cast shadow
-      if (hasFloorS) {
-        c.fillStyle = 'rgba(0,0,0,0.35)';
-        c.fillRect(0, h - 4, w, 4);
+      // Mortar vertical lines (offset per row)
+      const bw = Math.floor(w/2);
+      for(let row=0;row<3;row++){
+        const off = row%2===0 ? 0 : bw/2;
+        c.beginPath(); c.moveTo(off+bw,row*bh); c.lineTo(off+bw,(row+1)*bh); c.stroke();
       }
+      // Left-side shadow strip
+      c.fillStyle = 'rgba(0,0,0,0.25)';
+      c.fillRect(0,0,2,h);
     });
-    ctx.drawImage(t, sx, sy - WALL_H);
+    ctx.drawImage(t,sx,sy);
+    // South-face overdraw: lit face at bottom of wall tile, into the row below
+    if(hasFloorS){
+      const sf=this._cached(`wall_sf_${W}`,W,WALL_FACE_H,(c,w,h)=>{
+        c.fillStyle = PAL.wallLit;
+        c.fillRect(0,0,w,h);
+        c.fillStyle = PAL.wallTop;
+        c.fillRect(0,0,w,2);
+        c.fillStyle = 'rgba(0,0,0,0.38)';
+        c.fillRect(0,h-3,w,3);
+      });
+      ctx.drawImage(sf,sx,sy+H);
+    }
   },
 
   // ── STAIRS ────────────────────────────────────────────────
@@ -1430,7 +1398,7 @@ const EntityManager = {
       const dmg=Player.takeDamage(e.atk);
       Logger.add(`${e.name} hits you for ${dmg}!`,'dmg');
       Floaters.add(Player.x,Player.y,dmg,'#e8e8f0');
-      Camera.shake(4); triggerHitStop(70); AnimSystem.onEnemyHurt(e.id); hit=true;
+      Camera.shake(4); triggerHitStop(70); hit=true;
     }
     if(hit) flashScreen();
   },
@@ -1473,7 +1441,7 @@ const CombatSystem = {
         Logger.add('Shadow Step fizzled — no clear destination!','warn'); return false;
       }
       Player.x=p.x; Player.y=p.y;
-      FXSystem.add('shadowPuff',oldX,oldY,'#330044');
+      FXSystem.spawn('puff',oldX,oldY,'#330044');
       Logger.add('Shadow Step! Teleported.','skill'); return true;
     }
 
@@ -1484,9 +1452,8 @@ const CombatSystem = {
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
-        AnimSystem.onEnemyHurt(e.id);
-        if(sid==='thunderstrike') FXSystem.add('lightning',e.x,e.y,'#ffee44');
-        else if(sid==='spiritwave') FXSystem.add('burst',e.x,e.y,'#44aaff');
+        if(sid==='thunderstrike') FXSystem.spawn('lightning',e.x,e.y,'#ffee44');
+        else if(sid==='spiritwave') FXSystem.spawn('burst',e.x,e.y,'#44aaff');
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
       }
@@ -1497,10 +1464,9 @@ const CombatSystem = {
       const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
-      AnimSystem.onEnemyHurt(t.id);
-      if(sid==='fireball') FXSystem.add('burst',t.x,t.y,'#ff6600');
-      else if(sid==='icebolt') FXSystem.add('iceShards',t.x,t.y,'#88ccff');
-      else if(sid==='vampiricblow') FXSystem.add('burst',t.x,t.y,'#cc2244');
+      if(sid==='fireball') FXSystem.spawn('burst',t.x,t.y,'#ff6600');
+      else if(sid==='icebolt') FXSystem.spawn('burst',t.x,t.y,'#88ccff');
+      else if(sid==='vampiricblow') FXSystem.spawn('burst',t.x,t.y,'#cc2244');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
       if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
@@ -1614,78 +1580,80 @@ const MerchantSystem = {
 };
 
 // ============================================================
-//  AnimSystem — visual-only tweened positions & animation states
+//  AnimSystem — tweened visual positions
 // ============================================================
 const AnimSystem = {
-  playerVX: 2, playerVY: 2,
-  playerBob: 0, playerSwing: 0, playerHurt: 0,
-  _stepPhase: 0,
-  enemyVX: {}, enemyVY: {}, enemyBob: {}, enemyHurt: {},
-  running: false,
+  pvx: 0, pvy: 0,
+  evx: {}, evy: {},
+  _bob: 0, running: false,
 
-  onPlayerMove() { this._stepPhase += 0.25; this.playerBob = this._stepPhase; this.startLoop(); },
-  onPlayerAttack() { this.playerSwing = 1.0; this.startLoop(); },
-  onPlayerHurt() { this.playerHurt = 1.0; this.startLoop(); },
-  onEnemyHurt(id) { this.enemyHurt[id] = 1.0; this.startLoop(); },
-  onFloorChange() {
-    this.playerVX = Player.x; this.playerVY = Player.y;
-    this.enemyVX = {}; this.enemyVY = {}; this.enemyBob = {}; this.enemyHurt = {};
+  init() {
+    this.pvx = Player.x; this.pvy = Player.y;
+    this.evx = {}; this.evy = {};
+  },
+
+  snap() {
+    this.pvx = Player.x; this.pvy = Player.y;
+    this.evx = {}; this.evy = {};
+  },
+
+  trigger() { this._bob += 0.25; this.start(); },
+
+  playerScreen() {
+    return {
+      sx: this.pvx * TS - Camera.x,
+      sy: this.pvy * TS - Camera.y,
+      bob: Math.sin(this._bob * Math.PI * 2) * 2
+    };
+  },
+
+  enemyScreen(e) {
+    const vx = this.evx[e.id] ?? e.x;
+    const vy = this.evy[e.id] ?? e.y;
+    return {
+      sx: vx * TS - Camera.x,
+      sy: vy * TS - Camera.y,
+      bob: Math.sin((this._bob + e.id * 0.37) * Math.PI * 2) * 1.5
+    };
   },
 
   _needsUpdate() {
-    if (Math.abs(this.playerVX - Player.x) > 0.01 || Math.abs(this.playerVY - Player.y) > 0.01) return true;
-    if (this.playerSwing > 0.01 || this.playerHurt > 0.01) return true;
+    if (Math.abs(this.pvx - Player.x) > 0.01 || Math.abs(this.pvy - Player.y) > 0.01) return true;
     if (FXSystem.effects.length > 0) return true;
-    for (const id in this.enemyHurt) if (this.enemyHurt[id] > 0.01) return true;
     for (const e of EntityManager.enemies) {
       if (!e.alive) continue;
-      const vx = this.enemyVX[e.id] ?? e.x;
-      const vy = this.enemyVY[e.id] ?? e.y;
-      if (Math.abs(vx - e.x) > 0.01 || Math.abs(vy - e.y) > 0.01) return true;
+      if (Math.abs((this.evx[e.id] ?? e.x) - e.x) > 0.01) return true;
+      if (Math.abs((this.evy[e.id] ?? e.y) - e.y) > 0.01) return true;
     }
     return false;
   },
 
-  update() {
+  tick() {
     const sp = 0.18;
-    this.playerVX += (Player.x - this.playerVX) * sp * 3.5;
-    this.playerVY += (Player.y - this.playerVY) * sp * 3.5;
-    if (Math.abs(this.playerVX - Player.x) < 0.01) this.playerVX = Player.x;
-    if (Math.abs(this.playerVY - Player.y) < 0.01) this.playerVY = Player.y;
-    this.playerSwing *= 0.78;
-    this.playerHurt *= 0.82;
-    const moving = Math.abs(this.playerVX - Player.x) > 0.05 || Math.abs(this.playerVY - Player.y) > 0.05;
-    if (moving) this.playerBob += 0.04;
+    this.pvx += (Player.x - this.pvx) * sp * 3.5;
+    this.pvy += (Player.y - this.pvy) * sp * 3.5;
+    if (Math.abs(this.pvx - Player.x) < 0.01) this.pvx = Player.x;
+    if (Math.abs(this.pvy - Player.y) < 0.01) this.pvy = Player.y;
     for (const e of EntityManager.enemies) {
-      if (!(e.id in this.enemyVX)) { this.enemyVX[e.id] = e.x; this.enemyVY[e.id] = e.y; }
-      this.enemyVX[e.id] += (e.x - this.enemyVX[e.id]) * sp * 2.8;
-      this.enemyVY[e.id] += (e.y - this.enemyVY[e.id]) * sp * 2.8;
-      if (Math.abs(this.enemyVX[e.id] - e.x) < 0.01) this.enemyVX[e.id] = e.x;
-      if (Math.abs(this.enemyVY[e.id] - e.y) < 0.01) this.enemyVY[e.id] = e.y;
-      if (e.id in this.enemyHurt) this.enemyHurt[e.id] *= 0.80;
-      if (!(e.id in this.enemyBob)) this.enemyBob[e.id] = Math.random();
-      if (e.alive && FogOfWar.isVisible(e.x, e.y)) this.enemyBob[e.id] += 0.012;
+      if (!(e.id in this.evx)) { this.evx[e.id] = e.x; this.evy[e.id] = e.y; }
+      this.evx[e.id] += (e.x - this.evx[e.id]) * sp * 2.8;
+      this.evy[e.id] += (e.y - this.evy[e.id]) * sp * 2.8;
+      if (Math.abs(this.evx[e.id] - e.x) < 0.01) this.evx[e.id] = e.x;
+      if (Math.abs(this.evy[e.id] - e.y) < 0.01) this.evy[e.id] = e.y;
     }
     FXSystem.update();
   },
 
-  startLoop() {
+  start() {
     if (this.running) return;
     this.running = true;
-    const tick = () => {
+    const loop = () => {
       if (!this._needsUpdate()) { this.running = false; Renderer.draw(); return; }
-      this.update();
+      this.tick();
       Renderer.draw();
-      requestAnimationFrame(tick);
+      requestAnimationFrame(loop);
     };
-    requestAnimationFrame(tick);
-  },
-
-  getPlayerAnim() {
-    return { bob: this.playerBob, swingAngle: this.playerSwing * Math.PI * 0.6, hurtAlpha: this.playerHurt };
-  },
-  getEnemyAnim(id) {
-    return { bob: this.enemyBob[id] || 0, hurtAlpha: this.enemyHurt[id] || 0 };
+    requestAnimationFrame(loop);
   }
 };
 
@@ -1694,12 +1662,11 @@ const AnimSystem = {
 // ============================================================
 const FXSystem = {
   effects: [],
-  _maxAges: { burst:400, swingArc:250, iceShards:500, lightning:300, shadowPuff:400 },
+  _ages: { hit:200, burst:400, lightning:300, puff:400 },
 
-  add(type, x, y, color, extra) {
-    this.effects.push({ type, x, y, color: color||'#ffffff', extra: extra||{}, age: 0,
-      maxAge: this._maxAges[type]||400 });
-    AnimSystem.startLoop();
+  spawn(type, x, y, color) {
+    this.effects.push({ type, x, y, color: color||'#ffffff', age: 0, maxAge: this._ages[type]||400 });
+    AnimSystem.start();
   },
 
   update() {
@@ -1712,14 +1679,21 @@ const FXSystem = {
       const t = fx.age / fx.maxAge;
       const alpha = 1 - t;
 
+      if (fx.type === 'hit') {
+        ctx.save(); ctx.globalAlpha = alpha * 0.8;
+        ctx.strokeStyle = fx.color; ctx.lineWidth = 2;
+        const r = t * TS * 0.8;
+        ctx.beginPath(); ctx.arc(sx+TS/2, sy+TS/2, r, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+      }
       if (fx.type === 'burst') {
-        const r = t * TS * 1.8;
+        const r = t * TS * 1.6;
         ctx.save(); ctx.globalAlpha = alpha * 0.7;
         ctx.strokeStyle = fx.color; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(sx+TS/2, sy+TS/2, r, 0, Math.PI*2); ctx.stroke();
         for (let i = 0; i < 8; i++) {
           const angle = (i/8)*Math.PI*2+t;
-          const pr = t * TS * 1.4;
+          const pr = t * TS * 1.2;
           ctx.fillStyle = fx.color; ctx.globalAlpha = alpha * 0.8;
           ctx.beginPath();
           ctx.arc(sx+TS/2+Math.cos(angle)*pr, sy+TS/2+Math.sin(angle)*pr, 3*(1-t), 0, Math.PI*2);
@@ -1727,39 +1701,22 @@ const FXSystem = {
         }
         ctx.restore();
       }
-      if (fx.type === 'swingArc') {
-        ctx.save(); ctx.globalAlpha = alpha * 0.5;
-        ctx.strokeStyle = '#c0e0ff'; ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(sx+TS/2, sy+TS/2, TS*0.7, -0.8+t*1.2, 0.4+t*1.2);
-        ctx.stroke(); ctx.restore();
-      }
-      if (fx.type === 'iceShards') {
-        for (let i = 0; i < 6; i++) {
-          const angle = (i/6)*Math.PI*2;
-          const r = t * TS * 1.2;
-          ctx.save(); ctx.globalAlpha = alpha;
-          ctx.fillStyle = '#aaddff';
-          ctx.translate(sx+TS/2+Math.cos(angle)*r, sy+TS/2+Math.sin(angle)*r);
-          ctx.rotate(angle); ctx.fillRect(-2,-6,4,12); ctx.restore();
-        }
-      }
       if (fx.type === 'lightning') {
         ctx.save(); ctx.globalAlpha = alpha * 0.8;
-        ctx.strokeStyle = '#ffee44'; ctx.lineWidth = 2*(1-t*0.5);
-        ctx.shadowColor = '#ffee44'; ctx.shadowBlur = 8;
+        ctx.strokeStyle = fx.color; ctx.lineWidth = 2*(1-t*0.5);
+        ctx.shadowColor = fx.color; ctx.shadowBlur = 8;
         ctx.beginPath();
         let lx = sx+TS/2, ly = sy-TS; ctx.moveTo(lx, ly);
         for (let seg = 0; seg < 5; seg++) {
-          lx += (Math.sin(fx.age*0.1+seg*1.3)-0.5)*16;
+          lx += (Math.sin(fx.age*0.1+seg*1.3)-0.5)*14;
           ly += TS * 0.4; ctx.lineTo(lx, ly);
         }
         ctx.stroke(); ctx.restore();
       }
-      if (fx.type === 'shadowPuff') {
-        const r = t * TS * 1.0;
+      if (fx.type === 'puff') {
+        const r = t * TS * 0.9;
         ctx.save(); ctx.globalAlpha = (1-t)*0.5;
-        ctx.fillStyle = '#330044';
+        ctx.fillStyle = fx.color;
         ctx.beginPath(); ctx.arc(sx+TS/2, sy+TS/2, r, 0, Math.PI*2); ctx.fill();
         ctx.restore();
       }
@@ -1803,7 +1760,7 @@ const Renderer = {
 
   draw(){
     const ctx=this.ctx;
-    Camera.follow(AnimSystem.playerVX, AnimSystem.playerVY);
+    Camera.follow(AnimSystem.pvx, AnimSystem.pvy);
     // Black base (unseen tiles)
     ctx.fillStyle='#000'; ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
 
@@ -1876,8 +1833,8 @@ const Renderer = {
     const deadToRemove=[];
     for(const e of EntityManager.enemies){
       if(!FogOfWar.isVisible(e.x,e.y)) continue;
-      const esx = (AnimSystem.enemyVX[e.id] ?? e.x) * TS - Camera.x;
-      const esy = (AnimSystem.enemyVY[e.id] ?? e.y) * TS - Camera.y;
+      const es=AnimSystem.enemyScreen(e);
+      const esx=es.sx, esy=es.sy;
       if(!this._vis(esx,esy)) continue;
       if(!e.alive&&e.deathFlash>0){
         const flashAlpha=e.deathFlash/8;
@@ -1891,7 +1848,7 @@ const Renderer = {
       if(!e.alive) continue;
       ctx.fillStyle='rgba(0,0,0,0.3)';
       ctx.beginPath(); ctx.ellipse(esx+TS/2,esy+TS-5,TS*0.28,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.enemy(ctx,esx,esy,TS,TS,e,AnimSystem.getEnemyAnim(e.id));
+      TilePainter.enemy(ctx,esx,esy,TS,TS,e,{bob:es.bob,hurtAlpha:0});
       const bw=TS-4, bx=esx+2, by=esy+TS-6;
       const ratio=clamp(e.hp/e.maxHp,0,1);
       ctx.fillStyle='#1a0000'; ctx.fillRect(bx,by,bw,3);
@@ -1905,11 +1862,11 @@ const Renderer = {
 
     // ── Layer 6: Player ──────────────────────────────────────
     {
-      const psx = AnimSystem.playerVX * TS - Camera.x;
-      const psy = AnimSystem.playerVY * TS - Camera.y;
+      const ps=AnimSystem.playerScreen();
+      const psx=ps.sx, psy=ps.sy;
       ctx.fillStyle='rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(psx+TS/2,psy+TS-5,TS*0.26,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.player(ctx,psx,psy,TS,TS,AnimSystem.getPlayerAnim());
+      TilePainter.player(ctx,psx,psy,TS,TS,{bob:ps.bob,swingAngle:0,hurtAlpha:0});
     }
 
     // ── Layer 7: Fog of War overlay ──────────────────────────
@@ -1919,7 +1876,7 @@ const Renderer = {
         if(FogOfWar.isVisible(tx,ty)){
           // fully lit — no overlay
         } else if(FogOfWar.isExplored(tx,ty)){
-          ctx.fillStyle=PAL.fogExplored; ctx.fillRect(sx,sy,TS,TS);
+          ctx.fillStyle=PAL.fogDark; ctx.fillRect(sx,sy,TS,TS);
         } else {
           ctx.fillStyle='#000'; ctx.fillRect(sx,sy,TS,TS);
         }
@@ -1930,16 +1887,7 @@ const Renderer = {
     TorchSystem.draw(ctx);
 
     // ── Layer 9: Player ambient light ────────────────────────
-    {
-      const px = AnimSystem.playerVX * TS - Camera.x + TS/2;
-      const py = AnimSystem.playerVY * TS - Camera.y + TS/2;
-      const playerLight = ctx.createRadialGradient(px,py,0,px,py,TS*3.5);
-      playerLight.addColorStop(0,   'rgba(220,220,255,0.10)');
-      playerLight.addColorStop(0.5, 'rgba(180,180,255,0.05)');
-      playerLight.addColorStop(1,   'transparent');
-      ctx.fillStyle = playerLight;
-      ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
-    }
+    TorchSystem.drawPlayerLight(ctx);
 
     // ── Layer 10: Dust particles ─────────────────────────────
     DustParticles.draw(ctx);
@@ -2102,10 +2050,8 @@ const UIManager = {
     btn.textContent=`CONFIRM SELL (${val}g)`;
     btn.classList.add('active');
     this._sellConfirmTimer=setTimeout(()=>{
-      GameState.selectedInvIdx=-1;
-      this.renderInventory();
-      const det=document.getElementById('item-detail');
-      det.classList.remove('active'); det.innerHTML='';
+      const b=document.getElementById(`sell-btn-${idx}`);
+      if(b){ b.dataset.confirming=''; b.textContent=`SELL (${val}g)`; b.classList.remove('active'); }
     },3000);
   },
   doSell(idx,val) {
@@ -2258,8 +2204,8 @@ const Game = {
       const last=rooms[rooms.length-1];
       MapGen.tiles[last.cy][last.cx]=T.EXIT;
     }
-    AnimSystem.onFloorChange();
-    TorchSystem.generate(rooms);
+    AnimSystem.snap();
+    TorchSystem.generate();
     FogOfWar.init();
     FogOfWar.update(Player.x,Player.y);
     DustParticles.list=[]; DustParticles.startLoop();
@@ -2285,7 +2231,7 @@ const Game = {
     const e=EntityManager.at(nx,ny);
     if(e){ CombatSystem.attack(e); this.endTurn(); return; }
     Player.x=nx; Player.y=ny;
-    AnimSystem.onPlayerMove();
+    AnimSystem.trigger();
     const tile=MapGen.tiles[ny][nx];
     if(tile===T.STAIRS||tile===T.EXIT){
       if(!GameState.onStairs){
@@ -2303,8 +2249,7 @@ const Game = {
     const t=EntityManager.enemies.find(e=>e.alive&&dist(e,Player)===1);
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
     CombatSystem.attack(t);
-    FXSystem.add('swingArc',Player.x,Player.y,'#c0e0ff');
-    AnimSystem.onPlayerAttack();
+    FXSystem.spawn('hit',t.x,t.y,'#c8dcf0');
     this.endTurn();
   },
   trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
@@ -2549,7 +2494,7 @@ const _origLevelUp=Player.levelUp.bind(Player);
 Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); flashScreen('gold'); };
 // Wire Player.takeDamage audio + hurt anim
 const _origTakeDamage=Player.takeDamage.bind(Player);
-Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); AnimSystem.onPlayerHurt(); } return v; };
+Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); } return v; };
 
 // ── Boot ──────────────────────────────────────────────────────
 Game.init();
