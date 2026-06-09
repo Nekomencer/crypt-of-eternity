@@ -67,7 +67,7 @@
     background: var(--panel); flex-shrink: 0;
   }
   #top-bar .logo { color: var(--gold); font-size: 9px; }
-  #floor-info    { color: var(--dim); font-size: 8px; }
+  #floor-info    { color: var(--gold); font-size: 9px; letter-spacing: 1px; }
 
   #main-area { display: flex; width: 100%; flex: 1; overflow: hidden; }
 
@@ -92,8 +92,8 @@
   .bar-exp   { background: var(--purple); }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .stat-cell { background: #1a1a24; border: 1px solid var(--border); padding: 4px; display: flex; flex-direction: column; gap: 1px; }
-  .stat-cell .lbl { font-size: 6px; color: var(--dim); }
-  .stat-cell .val { font-size: 8px; color: var(--white); }
+  .stat-cell .lbl { font-size: 7px; color: var(--dim); }
+  .stat-cell .val { font-size: 14px; color: var(--white); font-family: var(--font-log); }
 
   .skill-slot {
     display: flex; align-items: center; gap: 5px;
@@ -102,17 +102,17 @@
   .skill-slot.empty { opacity: 0.3; }
   .skill-key { width: 16px; height: 16px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 8px; flex-shrink: 0; }
   .skill-info { flex: 1; overflow: hidden; }
-  .skill-name { font-size: 6px; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .skill-cost { font-size: 5px; color: var(--blue); }
+  .skill-name { font-size: 7px; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-log); }
+  .skill-cost { font-size: 13px; color: var(--blue); font-family: var(--font-log); }
   .skill-slot.skill-insufficient { opacity: 0.45; border-color: #333; }
   .skill-slot.skill-insufficient .skill-cost { color: var(--red); }
 
   .equip-slot { display: flex; align-items: center; gap: 6px; background: #1a1a24; border: 1px solid var(--border); padding: 5px 6px; }
   .equip-icon { font-size: 14px; }
   .equip-info { flex: 1; }
-  .equip-lbl  { font-size: 5px; color: var(--dim); }
-  .equip-name { font-size: 6px; color: var(--white); }
-  .equip-stat { font-size: 5px; color: var(--green); }
+  .equip-lbl  { font-size: 7px; color: var(--dim); }
+  .equip-name { font-size: 13px; color: var(--white); font-family: var(--font-log); }
+  .equip-stat { font-size: 13px; color: var(--green); font-family: var(--font-log); }
 
   /* MAP */
   #map-area { flex: 1; position: relative; background: #000; overflow: hidden; }
@@ -181,7 +181,7 @@
   .merchant-icon  { font-size:20px; }
   .merchant-info  { flex:1; display:flex; flex-direction:column; gap:2px; }
   .merchant-name  { font-size:8px; color:var(--white); }
-  .merchant-stat  { font-size:6px; color:var(--green); }
+  .merchant-stat  { font-size:13px; color:var(--green); font-family:var(--font-log); }
   .merchant-price { font-size:8px; color:var(--gold); }
   .merchant-cant  { opacity:0.4; cursor:not-allowed; }
 
@@ -195,7 +195,8 @@
 
   /* FLASH */
   #flash { position:fixed; inset:0; background:var(--red); opacity:0; pointer-events:none; z-index:400; transition:opacity 0.1s; }
-  #flash.active { opacity:0.15; }
+  #flash.active { opacity:0.30; }
+  #flash.flash-gold { background:var(--gold); }
 
   /* VICTORY */
   #victory-screen { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:none; align-items:center; justify-content:center; z-index:200; flex-direction:column; gap:20px; }
@@ -332,7 +333,7 @@
 // ============================================================
 
 // ── GLOBAL CONSTANTS ─────────────────────────────────────────
-const TS      = 32;    // tile pixel size
+const TS      = 40;    // tile pixel size
 const COLS    = 42;    // wider world map
 const ROWS    = 30;    // taller world map
 const INV_MAX = 20;
@@ -348,11 +349,11 @@ const PAL = {
   // Floors
   floorA:'#19172a', floorB:'#1c1a2d', floorLine:'#23213a',
   // Walls
-  wallDark:'#0c0c14', wallFace:'#131120', wallLit:'#272444', wallMortar:'#1a182c',
+  wallDark:'#141220', wallFace:'#1e1c32', wallLit:'#322f52', wallMortar:'#1e1b30',
   // Stairs
   stairBg:'#112233', stairGlow:'rgba(76,201,240,0.18)', stairColor:'#4cc9f0',
   // Fog
-  fogDark:'rgba(0,0,0,0.65)',
+  fogDark:'rgba(0,0,20,0.52)',
   // Entities
   playerRobe:'#2e1a5e', playerSkin:'#d4a870', playerHat:'#f5c842', playerStaff:'#b89030',
   playerGem:'#60f0ff', playerGlow:'rgba(245,200,66,0.22)',
@@ -363,6 +364,13 @@ const PAL = {
   chestOpen:'#3a2a08', merchantRobe:'#1e3a50', merchantSkin:'#c8a870',
   merchantHat:'#4cc9f0', merchantGold:'#f5c842',
 };
+
+function floorTint(floor) {
+  const t = Math.min((floor - 1) / 9, 1);
+  const r = Math.round(t * 180);
+  const a = (t * 0.18).toFixed(2);
+  return `rgba(${r},0,0,${a})`;
+}
 
 // ── SKILL DEFINITIONS ─────────────────────────────────────────
 const SKILL_DEFS = {
@@ -824,6 +832,7 @@ const PulseLoop = {
   _needsPulse(){
     if(GameState.state!=='EXPLORE') return false;
     if(Math.abs(Camera.shakeX)>0.5||Math.abs(Camera.shakeY)>0.5) return true;
+    if(DustParticles.list.length>0) return true;
     if(EntityManager.merchant&&dist(EntityManager.merchant,Player)<=1&&FogOfWar.isVisible(EntityManager.merchant.x,EntityManager.merchant.y)) return true;
     for(const ch of EntityManager.chests)
       if(!ch.opened&&dist(ch,Player)<=1&&FogOfWar.isExplored(ch.x,ch.y)) return true;
@@ -863,8 +872,9 @@ const TilePainter = {
 
   // ── FLOOR ─────────────────────────────────────────────────
   floor(ctx,sx,sy,W,H,alt){
-    const t=this._cached(`floor_${W}_${H}_${alt}`,W,H,(c,w,h)=>{
-      c.fillStyle=alt?PAL.floorB:PAL.floorA; c.fillRect(0,0,w,h);
+    const t=this._cached(`floor_${W}_${H}_${alt}_${GameState.floor}`,W,H,(c,w,h)=>{
+      const depthShift=Math.min(GameState.floor*2,16);
+      c.fillStyle=alt?`rgb(${28+depthShift},26,45)`:`rgb(${25+depthShift},23,42)`; c.fillRect(0,0,w,h);
       // Stone grid lines
       c.strokeStyle=PAL.floorLine; c.lineWidth=0.5;
       c.strokeRect(0.5,0.5,w-1,h-1);
@@ -893,6 +903,9 @@ const TilePainter = {
       c.strokeStyle=PAL.wallMortar; c.lineWidth=1;
       c.strokeRect(0.5,0.5,w-1,h-1);
       c.beginPath(); c.moveTo(0,bh); c.lineTo(w,bh); c.stroke();
+      // Top highlight on all walls (lit-from-above)
+      c.fillStyle='#28253e';
+      c.fillRect(0,0,w,1);
       // Front face lit edge (visible when floor is directly south)
       if(hasFloorS){ c.fillStyle=PAL.wallLit; c.fillRect(0,0,w,3); }
     });
@@ -1174,7 +1187,7 @@ const EntityManager = {
       const dmg=Player.takeDamage(e.atk);
       Logger.add(`${e.name} hits you for ${dmg}!`,'dmg');
       Floaters.add(Player.x,Player.y,dmg,'#e8e8f0');
-      Camera.shake(4); hit=true;
+      Camera.shake(4); triggerHitStop(70); hit=true;
     }
     if(hit) flashScreen();
   },
@@ -1189,8 +1202,9 @@ const CombatSystem = {
     const dmg=Math.max(1,Player.totalAtk-enemy.def+rng(-2,2));
     enemy.hp-=dmg; Logger.add(`You hit ${enemy.name} for ${dmg}`,'');
     Floaters.add(enemy.x,enemy.y,dmg,'#e63946');
+    triggerHitStop(70);
     if(enemy.hp<=0){
-      enemy.alive=false; enemy.deathFlash=3;
+      enemy.alive=false; enemy.deathFlash=8;
       Player.gainExp(enemy.exp); Player.gainGold(rng(...enemy.gold));
       Logger.add(`${enemy.name} defeated!`,'loot');
       this._drop(enemy);
@@ -1223,7 +1237,7 @@ const CombatSystem = {
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
-        if(e.hp<=0){ e.alive=false; e.deathFlash=3; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
+        if(e.hp<=0){ e.alive=false; e.deathFlash=8; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
       }
       if(!hits) Logger.add(`${def.name}: No targets in range.`,'warn');
@@ -1234,7 +1248,7 @@ const CombatSystem = {
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
-      if(t.hp<=0){ t.alive=false; t.deathFlash=3; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
+      if(t.hp<=0){ t.alive=false; t.deathFlash=8; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
     return true;
   },
@@ -1262,8 +1276,10 @@ const CombatSystem = {
     const rarity=this._rarity(floor);
     if(!Player.addItem(this._scale(item,rarity,floor),rarity))
       Logger.add(`Inventory full — item lost: ${item.icon} ${item.name}`,'warn');
-    else
+    else {
+      Audio.play('loot');
       Logger.add(`Dropped: ${item.icon} ${item.name} (${rarity})`,'loot');
+    }
   },
   _rarity(f){ const r=rng(1,100); if(f>=4&&r<=10)return'epic'; if(f>=2&&r<=30)return'rare'; return'common'; },
   _scale(item,rarity,floor){
@@ -1276,6 +1292,7 @@ const CombatSystem = {
   },
   openChest(ch){
     if(ch.opened) return; ch.opened=true;
+    Audio.play('chest');
     const gold=rng(10,20+GameState.floor*8);
     Player.gainGold(gold); Logger.add(`Chest opened! +${gold} gold`,'gold');
     if(rng(0,1)===1){
@@ -1295,8 +1312,13 @@ const CombatSystem = {
 // ============================================================
 const GameState = {
   state:'EXPLORE', floor:1, turnCount:0, selectedInvIdx:-1, onStairs:false,
+  hitFreezeUntil:0,
   setFloor(n){ this.floor=n; document.getElementById('floor-info').textContent=`FLOOR ${n}`; },
 };
+
+function triggerHitStop(ms=70){
+  GameState.hitFreezeUntil=performance.now()+ms;
+}
 
 // ============================================================
 //  MerchantSystem
@@ -1329,7 +1351,7 @@ const MerchantSystem = {
       Logger.add(`Bought ${e.item.name}!`,'skill');
     } else {
       if(Player.inventory.length>=INV_MAX){ Logger.add('Inventory full!','warn'); return; }
-      Player.spendGold(e.price); Player.addItem(e.item,e.rarity);
+      Audio.play('buy'); Player.spendGold(e.price); Player.addItem(e.item,e.rarity);
       Logger.add(`Bought ${e.item.icon} ${e.item.name}!`,'loot');
     }
     this.stock.splice(idx,1);
@@ -1449,7 +1471,8 @@ const Renderer = {
       const {sx,sy}=Camera.toScreen(e.x,e.y);
       if(!this._vis(sx,sy)) continue;
       if(!e.alive&&e.deathFlash>0){
-        ctx.save(); ctx.globalAlpha=0.6;
+        const flashAlpha=e.deathFlash/8;
+        ctx.save(); ctx.globalAlpha=flashAlpha*0.85;
         ctx.fillStyle='#ffffff'; ctx.fillRect(sx,sy,TS,TS);
         ctx.restore();
         e.deathFlash--;
@@ -1488,14 +1511,23 @@ const Renderer = {
         if(FogOfWar.isVisible(tx,ty)){
           // Fully lit — no overlay
         } else if(FogOfWar.isExplored(tx,ty)){
-          ctx.fillStyle=PAL.fogDark; ctx.fillRect(sx,sy,TS,TS);
+          ctx.fillStyle='rgba(10,8,30,0.50)'; ctx.fillRect(sx,sy,TS,TS);
         } else {
           ctx.fillStyle='#000'; ctx.fillRect(sx,sy,TS,TS);
         }
       }
     }
 
-    // ── Layer 8: Floaters ────────────────────────────────────
+    // ── Layer 8: Floor depth tint ────────────────────────────
+    if(GameState.floor>1){
+      ctx.fillStyle=floorTint(GameState.floor);
+      ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+    }
+
+    // ── Layer 9: Dust particles ──────────────────────────────
+    DustParticles.draw(ctx);
+
+    // ── Layer 10: Floaters ───────────────────────────────────
     Floaters.draw(ctx);
 
     // ── Minimap ──────────────────────────────────────────────
@@ -1705,14 +1737,21 @@ const UIManager = {
 //  InputHandler
 // ============================================================
 const InputHandler = {
-  lockUntil:0,
-  init(){ document.addEventListener('keydown',e=>this.onKey(e)); },
+  lockUntil:0, _holdKey:null, _holdDelay:160, _holdRepeat:110,
+  init(){
+    document.addEventListener('keydown',e=>this.onKey(e));
+    document.addEventListener('keyup',e=>{ if(e.key===this._holdKey) this._holdKey=null; });
+  },
   onKey(e){
     if(GameState.state==='GAME_OVER') return;
-    Audio.enabled=true;
+    if(!Audio.enabled){ Audio.enabled=true; AmbientMusic.start(GameState.floor); }
     const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' '];
     if(gk.includes(e.key)) e.preventDefault();
-    const now=Date.now(); if(now<this.lockUntil) return; this.lockUntil=now+160;
+    const now=Date.now(); if(now<this.lockUntil) return;
+    const movKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
+    const isMove=movKeys.includes(e.key); const isHeld=(e.key===this._holdKey);
+    if(isMove) this._holdKey=e.key;
+    this.lockUntil=now+(isMove&&isHeld?this._holdRepeat:this._holdDelay);
     const k=e.key;
     if(k==='i'||k==='I'){ GameState.state==='INVENTORY'?UIManager.closeInventory():GameState.state==='EXPLORE'&&UIManager.openInventory(); return; }
     if(GameState.state==='INVENTORY') return;
@@ -1777,6 +1816,7 @@ const Game = {
     }
     FogOfWar.init();
     FogOfWar.update(Player.x,Player.y);
+    DustParticles.list=[]; DustParticles.startLoop();
     Player.restoreMp(Math.floor(Player.maxMp*0.75));
     Logger.add(`─── Floor ${newFloor} ───`,'info');
     UIManager.updateAll(); Renderer.draw();
@@ -1790,6 +1830,7 @@ const Game = {
       setTimeout(()=>{ ann.classList.remove('active'); ann.style.transition=''; ann.style.opacity=''; },1300);
     },400);
     Audio.play('stairs');
+    AmbientMusic.setFloor(newFloor);
   },
 
   tryMove(dx,dy){
@@ -1840,6 +1881,11 @@ const Game = {
     Logger.add('Nothing to interact with.','dim');
   },
   endTurn(){
+    if(performance.now()<GameState.hitFreezeUntil){
+      Renderer.draw();
+      setTimeout(()=>this.endTurn(),16);
+      return;
+    }
     GameState.turnCount++;
     EntityManager.moveEnemies();
     EntityManager.attackAdjacent();
@@ -1854,10 +1900,11 @@ const Game = {
 };
 
 // ── Flash utility ─────────────────────────────────────────────
-function flashScreen(){
+function flashScreen(color='red'){
   const el=document.getElementById('flash');
+  if(color==='gold') el.classList.add('flash-gold');
   el.classList.add('active');
-  setTimeout(()=>el.classList.remove('active'),150);
+  setTimeout(()=>el.classList.remove('active','flash-gold'),200);
 }
 
 // ── Web Audio ─────────────────────────────────────────────────
@@ -1899,14 +1946,27 @@ const Audio = {
     }catch(e){}
   },
 
+  _sweep(f0,f1,dur,gain){
+    try{
+      const ac=this._ctx(),osc=ac.createOscillator(),g=ac.createGain();
+      osc.type='sine'; osc.frequency.setValueAtTime(f0,ac.currentTime); osc.frequency.linearRampToValueAtTime(f1,ac.currentTime+dur);
+      g.gain.setValueAtTime(gain||0.1,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
+      osc.connect(g); g.connect(ac.destination); osc.start(); osc.stop(ac.currentTime+dur);
+    }catch(e){}
+  },
+
   play(type){
     if(!this.enabled) return;
-    if(type==='walk')   this._noise(0.08,400,0.06);
-    if(type==='attack') this._tone(180,0.12,'sawtooth',0.13);
-    if(type==='hit')    this._noise(0.2,800,0.15);
+    if(type==='walk')    this._noise(0.08,400,0.06);
+    if(type==='attack')  this._tone(220,0.10,'sawtooth',0.13);
+    if(type==='hit')     { this._noise(0.08,200,0.15); }
     if(type==='levelup') this._arp([261,329,392],0.08);
-    if(type==='death')  this._arp([220,196,165,130],0.12);
-    if(type==='stairs') { try{ const ac=this._ctx(),osc=ac.createOscillator(),g=ac.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(300,ac.currentTime); osc.frequency.linearRampToValueAtTime(600,ac.currentTime+0.3); g.gain.setValueAtTime(0.1,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3); osc.connect(g); g.connect(ac.destination); osc.start(); osc.stop(ac.currentTime+0.3); }catch(e){} }
+    if(type==='death')   { try{ const ac=this._ctx(),buf=ac.createBuffer(1,Math.floor(ac.sampleRate*0.2),ac.sampleRate),d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const src=ac.createBufferSource(); src.buffer=buf; const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=400; const g=ac.createGain(); g.gain.setValueAtTime(0.18,ac.currentTime); g.gain.linearRampToValueAtTime(0.001,ac.currentTime+0.4); src.connect(lp); lp.connect(g); g.connect(ac.destination); src.start(); src.stop(ac.currentTime+0.4); }catch(e){} }
+    if(type==='skill')   this._sweep(440,880,0.18,0.1);
+    if(type==='chest')   { this._tone(800,0.03,'sine',0.12); setTimeout(()=>this._tone(800,0.03,'sine',0.12),50); }
+    if(type==='loot')    this._tone(1200,0.05,'triangle',0.10);
+    if(type==='buy')     { this._tone(392,0.06,'sine',0.10); setTimeout(()=>this._tone(523,0.06,'sine',0.10),65); }
+    if(type==='stairs')  this._sweep(300,600,0.3,0.1);
   },
 
   playSkill(sid){
@@ -1920,9 +1980,123 @@ const Audio = {
   },
 };
 
+// ============================================================
+//  AmbientMusic — generative background drone
+// ============================================================
+const AmbientMusic = {
+  ctx:null, masterGain:null, running:false, floor:1, _droneOscs:[],
+
+  start(floor){
+    this.floor=floor;
+    if(!this.ctx){
+      this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      this.masterGain=this.ctx.createGain();
+      this.masterGain.gain.value=0.18;
+      this.masterGain.connect(this.ctx.destination);
+    }
+    if(this.ctx.state==='suspended') this.ctx.resume();
+    if(this.running) return;
+    this.running=true;
+    this._startDrone();
+    this._scheduleArp();
+  },
+
+  stop(){ this.running=false; },
+
+  setFloor(floor){
+    this.floor=floor;
+    // Stop current drones; new drone with lower pitch spawns next _scheduleArp cycle
+    for(const o of this._droneOscs){ try{ o.stop(); }catch(e){} }
+    this._droneOscs=[];
+    if(this.running){ this._startDrone(); }
+  },
+
+  _startDrone(){
+    if(!this.running||!this.ctx) return;
+    const ctx=this.ctx;
+    const freqBase=55*Math.pow(2,(this.floor-1)*-0.04);
+    [0,3].forEach(detune=>{
+      try{
+        const osc=ctx.createOscillator(), g=ctx.createGain();
+        osc.type='sine'; osc.frequency.value=freqBase; osc.detune.value=detune;
+        g.gain.setValueAtTime(0,ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.4,ctx.currentTime+3);
+        osc.connect(g); g.connect(this.masterGain);
+        osc.start(); this._droneOscs.push(osc);
+      }catch(e){}
+    });
+  },
+
+  _scheduleArp(){
+    if(!this.running||!this.ctx) return;
+    const ctx=this.ctx;
+    const depthOffset=(this.floor-1)*-2;
+    const notes=[110,130.8,146.8,164.8,196].map(n=>n*Math.pow(2,depthOffset/12));
+    const note=notes[Math.floor(Math.random()*notes.length)];
+    try{
+      const osc=ctx.createOscillator(), g=ctx.createGain();
+      osc.type='triangle';
+      osc.frequency.value=note*(Math.random()>0.8?0.5:1);
+      g.gain.setValueAtTime(0,ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.15,ctx.currentTime+0.08);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.8);
+      osc.connect(g); g.connect(this.masterGain);
+      osc.start(); osc.stop(ctx.currentTime+2);
+    }catch(e){}
+    setTimeout(()=>this._scheduleArp(), 2000+Math.random()*5000);
+  },
+};
+
+// ============================================================
+//  DustParticles — ambient environmental dust motes
+// ============================================================
+const DustParticles = {
+  list:[], running:false,
+
+  spawn(cameraX,cameraY,vw,vh){
+    if(this.list.length>40) return;
+    const tx=Math.floor((cameraX+Math.random()*vw)/TS);
+    const ty=Math.floor((cameraY+Math.random()*vh)/TS);
+    if(!FogOfWar.isVisible(tx,ty)||MapGen.tiles[ty]?.[tx]===T.WALL) return;
+    this.list.push({
+      wx:tx+Math.random(), wy:ty+Math.random(),
+      vy:-0.003-Math.random()*0.004, vx:(Math.random()-0.5)*0.002,
+      age:0, maxAge:4000+Math.random()*3000,
+      size:0.8+Math.random()*1.2, alpha:0.15+Math.random()*0.2,
+    });
+  },
+
+  draw(ctx){
+    this.list=this.list.filter(p=>{
+      p.wy+=p.vy; p.wx+=p.vx; p.age+=16;
+      if(p.age>=p.maxAge) return false;
+      if(!FogOfWar.isVisible(Math.floor(p.wx),Math.floor(p.wy))) return false;
+      const {sx,sy}=Camera.toScreen(p.wx,p.wy);
+      const alpha=p.alpha*(1-p.age/p.maxAge);
+      ctx.save(); ctx.globalAlpha=alpha;
+      ctx.fillStyle='#9b8ec0';
+      ctx.beginPath(); ctx.arc(sx,sy,p.size,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      return true;
+    });
+    if(Math.random()<0.3) this.spawn(Camera.x,Camera.y,Camera.vw||400,Camera.vh||300);
+  },
+
+  startLoop(){
+    if(this.running) return;
+    this.running=true;
+    const tick=()=>{
+      if(GameState.state!=='EXPLORE'){ this.running=false; return; }
+      Renderer.draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+};
+
 // Wire Player.levelUp audio
 const _origLevelUp=Player.levelUp.bind(Player);
-Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); };
+Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); flashScreen('gold'); };
 // Wire Player.takeDamage audio
 const _origTakeDamage=Player.takeDamage.bind(Player);
 Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0) Audio.play('hit'); return v; };
