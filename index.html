@@ -455,6 +455,9 @@ const Player = {
     const {item,rarity}=this.inventory[i];
     const slot=item.type==='weapon'?'weapon':item.type==='armor'?'armor':null;
     if(!slot) return;
+    if(this.equipment[slot] && this.inventory.length>=INV_MAX){
+      Logger.add('Inventory full — unequip first!','warn'); return;
+    }
     if(this.equipment[slot]) this.addItem(this.equipment[slot].item, this.equipment[slot].rarity);
     this.equipment[slot]={item,rarity}; this.removeItem(i);
   },
@@ -1564,6 +1567,7 @@ const UIManager = {
     det.classList.remove('active'); det.innerHTML='';
   },
   renderInventory(){
+    clearTimeout(this._sellConfirmTimer); this._sellConfirmTimer=null;
     const banner=document.getElementById('inv-full-banner');
     banner.style.display=Player.inventory.length>=INV_MAX?'block':'none';
     const grid=document.getElementById('inv-grid'); grid.innerHTML='';
@@ -1636,9 +1640,7 @@ const UIManager = {
     btn.dataset.confirming='1';
     btn.textContent=`CONFIRM SELL (${val}g)`;
     btn.classList.add('active');
-    this._sellConfirmTimer=setTimeout(()=>{
-      if(btn){ btn.dataset.confirming=''; btn.textContent=`SELL (${val}g)`; btn.classList.remove('active'); }
-    },3000);
+    this._sellConfirmTimer=setTimeout(()=>{ this.renderInventory(); },3000);
   },
   doSell(idx,val) {
     const e=Player.inventory[idx]; if(!e) return;
@@ -1737,6 +1739,7 @@ const Game = {
     Renderer.init(); InputHandler.init();
     document.getElementById('start-btn').onclick=()=>this.startGame();
     document.getElementById('restart-btn').onclick=()=>this.startGame();
+    document.getElementById('victory-btn').onclick=()=>this.startGame();
   },
 
   startGame(){
@@ -1926,7 +1929,6 @@ Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0) Audio.play('h
 
 // ── Boot ──────────────────────────────────────────────────────
 Game.init();
-document.getElementById('victory-btn').onclick=()=>Game.startGame();
 </script>
 </body>
 </html>
