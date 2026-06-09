@@ -195,7 +195,7 @@
 
   /* FLASH */
   #flash { position:fixed; inset:0; background:var(--red); opacity:0; pointer-events:none; z-index:400; transition:opacity 0.1s; }
-  #flash.active { opacity:0.30; }
+  #flash.active { opacity:0.32; }
   #flash.flash-gold { background:var(--gold); }
 
   /* VICTORY */
@@ -349,11 +349,11 @@ const PAL = {
   // Floors
   floorA:'#19172a', floorB:'#1c1a2d', floorLine:'#23213a',
   // Walls
-  wallDark:'#141220', wallFace:'#1e1c32', wallLit:'#322f52', wallMortar:'#1e1b30',
+  wallDark:'#141220', wallFace:'#1e1c32', wallLit:'#342f54', wallMortar:'#1e1b30',
   // Stairs
   stairBg:'#112233', stairGlow:'rgba(76,201,240,0.18)', stairColor:'#4cc9f0',
   // Fog
-  fogDark:'rgba(0,0,20,0.52)',
+  fogDark:'rgba(8,6,24,0.50)',
   // Entities
   playerRobe:'#2e1a5e', playerSkin:'#d4a870', playerHat:'#f5c842', playerStaff:'#b89030',
   playerGem:'#60f0ff', playerGlow:'rgba(245,200,66,0.22)',
@@ -1202,9 +1202,10 @@ const CombatSystem = {
     const dmg=Math.max(1,Player.totalAtk-enemy.def+rng(-2,2));
     enemy.hp-=dmg; Logger.add(`You hit ${enemy.name} for ${dmg}`,'');
     Floaters.add(enemy.x,enemy.y,dmg,'#e63946');
-    triggerHitStop(70);
+    Audio.play('attack'); triggerHitStop(70);
     if(enemy.hp<=0){
       enemy.alive=false; enemy.deathFlash=8;
+      Audio.play('death');
       Player.gainExp(enemy.exp); Player.gainGold(rng(...enemy.gold));
       Logger.add(`${enemy.name} defeated!`,'loot');
       this._drop(enemy);
@@ -1219,6 +1220,7 @@ const CombatSystem = {
     const def=SKILL_DEFS[sid];
     if(Player.mp<def.manaCost){ Logger.add('Not enough mana!','warn'); return false; }
     Player.mp-=def.manaCost;
+    Audio.play('skill');
 
     if(sid==='shadowstep'){
       const p=MapGen.randomFloorInRoom(MapGen.rooms);
@@ -1237,7 +1239,7 @@ const CombatSystem = {
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
-        if(e.hp<=0){ e.alive=false; e.deathFlash=8; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
+        if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
       }
       if(!hits) Logger.add(`${def.name}: No targets in range.`,'warn');
@@ -1248,7 +1250,7 @@ const CombatSystem = {
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
-      if(t.hp<=0){ t.alive=false; t.deathFlash=8; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
+      if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
     return true;
   },
@@ -1672,7 +1674,12 @@ const UIManager = {
     btn.dataset.confirming='1';
     btn.textContent=`CONFIRM SELL (${val}g)`;
     btn.classList.add('active');
-    this._sellConfirmTimer=setTimeout(()=>{ this.renderInventory(); },3000);
+    this._sellConfirmTimer=setTimeout(()=>{
+      GameState.selectedInvIdx=-1;
+      this.renderInventory();
+      const det=document.getElementById('item-detail');
+      det.classList.remove('active'); det.innerHTML='';
+    },3000);
   },
   doSell(idx,val) {
     const e=Player.inventory[idx]; if(!e) return;
@@ -1737,21 +1744,19 @@ const UIManager = {
 //  InputHandler
 // ============================================================
 const InputHandler = {
-  lockUntil:0, _holdKey:null, _holdDelay:160, _holdRepeat:110,
+  lockUntil:0, _holdKey:null, _holdTimer:null,
   init(){
     document.addEventListener('keydown',e=>this.onKey(e));
-    document.addEventListener('keyup',e=>{ if(e.key===this._holdKey) this._holdKey=null; });
+    document.addEventListener('keyup',e=>{
+      if(this._holdKey===e.key){ this._holdKey=null; clearTimeout(this._holdTimer); }
+    });
   },
   onKey(e){
     if(GameState.state==='GAME_OVER') return;
     if(!Audio.enabled){ Audio.enabled=true; AmbientMusic.start(GameState.floor); }
     const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' '];
     if(gk.includes(e.key)) e.preventDefault();
-    const now=Date.now(); if(now<this.lockUntil) return;
-    const movKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
-    const isMove=movKeys.includes(e.key); const isHeld=(e.key===this._holdKey);
-    if(isMove) this._holdKey=e.key;
-    this.lockUntil=now+(isMove&&isHeld?this._holdRepeat:this._holdDelay);
+    const now=Date.now(); if(now<this.lockUntil) return; this.lockUntil=now+160;
     const k=e.key;
     if(k==='i'||k==='I'){ GameState.state==='INVENTORY'?UIManager.closeInventory():GameState.state==='EXPLORE'&&UIManager.openInventory(); return; }
     if(GameState.state==='INVENTORY') return;
@@ -1760,7 +1765,19 @@ const InputHandler = {
     const dirs={'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0},
                 'w':{x:0,y:-1},'s':{x:0,y:1},'a':{x:-1,y:0},'d':{x:1,y:0},
                 'W':{x:0,y:-1},'S':{x:0,y:1},'A':{x:-1,y:0},'D':{x:1,y:0}};
-    if(dirs[k])          { Game.tryMove(dirs[k].x,dirs[k].y); return; }
+    if(dirs[k]){
+      clearTimeout(this._holdTimer);
+      this._holdKey=k;
+      Game.tryMove(dirs[k].x,dirs[k].y);
+      const repeat=()=>{
+        if(this._holdKey!==k) return;
+        if(Date.now()<this.lockUntil){ this._holdTimer=setTimeout(repeat,30); return; }
+        Game.tryMove(dirs[k].x,dirs[k].y);
+        this._holdTimer=setTimeout(repeat,110);
+      };
+      this._holdTimer=setTimeout(repeat,160);
+      return;
+    }
     if(k===' ')          { Game.tryAttack();  return; }
     if(k==='1')          { Game.trySkill(0);  return; }
     if(k==='2')          { Game.trySkill(1);  return; }
@@ -1855,7 +1872,7 @@ const Game = {
   tryAttack(){
     const t=EntityManager.enemies.find(e=>e.alive&&dist(e,Player)===1);
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
-    CombatSystem.attack(t); Audio.play('attack'); this.endTurn();
+    CombatSystem.attack(t); this.endTurn();
   },
   trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
   tryQuickUse(){
@@ -1902,9 +1919,9 @@ const Game = {
 // ── Flash utility ─────────────────────────────────────────────
 function flashScreen(color='red'){
   const el=document.getElementById('flash');
-  if(color==='gold') el.classList.add('flash-gold');
+  el.style.background=color==='gold'?'var(--gold)':'var(--red)';
   el.classList.add('active');
-  setTimeout(()=>el.classList.remove('active','flash-gold'),200);
+  setTimeout(()=>{ el.classList.remove('active'); el.style.background=''; },220);
 }
 
 // ── Web Audio ─────────────────────────────────────────────────
