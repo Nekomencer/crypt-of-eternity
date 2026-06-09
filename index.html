@@ -333,7 +333,8 @@
 // ============================================================
 
 // ── GLOBAL CONSTANTS ─────────────────────────────────────────
-const TS      = 40;    // tile pixel size
+const TS      = 48;   // tile pixel size (Minecraft Dungeons feel)
+const WALL_H  = 18;   // extra pixels of wall face shown above tile (fake 3D depth)
 const COLS    = 42;    // wider world map
 const ROWS    = 30;    // taller world map
 const INV_MAX = 20;
@@ -346,23 +347,64 @@ const T = { WALL:0, FLOOR:1, STAIRS:3, EXIT:4 };
 
 // ── COLOUR PALETTE ────────────────────────────────────────────
 const PAL = {
-  // Floors
-  floorA:'#19172a', floorB:'#1c1a2d', floorLine:'#23213a',
-  // Walls
-  wallDark:'#141220', wallFace:'#1e1c32', wallLit:'#342f54', wallMortar:'#1e1b30',
-  // Stairs
-  stairBg:'#112233', stairGlow:'rgba(76,201,240,0.18)', stairColor:'#4cc9f0',
+  // Floors — cobblestone gray
+  floorA:      '#4a4a52',
+  floorB:      '#424248',
+  floorJoint:  '#2e2e34',
+  floorMoss:   '#3a4a30',
+  floorDark:   '#38383e',
+
+  // Walls — deep stone with blue-gray cast
+  wallTop:     '#5a5870',
+  wallFace:    '#38364a',
+  wallShadow:  '#1e1c28',
+  wallMortar:  '#2a2838',
+  wallEdge:    '#6a6880',
+
+  // Torchlight
+  torchOrange: '#ff8c00',
+  torchYellow: '#ffcc44',
+  torchGlow:   'rgba(255,160,30,0.22)',
+
+  // Stairs / exit
+  stairBg:     '#1a1a2e',
+  stairGlow:   'rgba(76,201,240,0.25)',
+  stairColor:  '#4cc9f0',
+  exitGlow:    'rgba(245,200,66,0.35)',
+  exitColor:   '#f5c842',
+
   // Fog
-  fogDark:'rgba(8,6,24,0.50)',
-  // Entities
-  playerRobe:'#2e1a5e', playerSkin:'#d4a870', playerHat:'#f5c842', playerStaff:'#b89030',
-  playerGem:'#60f0ff', playerGlow:'rgba(245,200,66,0.22)',
-  goblin:'#52b788', orc:'#e07820', skeleton:'#c0c0d8',
-  troll:'#9b5de5', demon:'#e63946',
-  hpHigh:'#e63946', hpLow:'#ff7722',
-  chestWood:'#6b4a10', chestLid:'#c89a30', chestLock:'#c8a020',
-  chestOpen:'#3a2a08', merchantRobe:'#1e3a50', merchantSkin:'#c8a870',
-  merchantHat:'#4cc9f0', merchantGold:'#f5c842',
+  fogExplored: 'rgba(12,10,22,0.58)',
+
+  // Entities — Minecraft-style block colors
+  playerBody:  '#5b8dd9',
+  playerSkin:  '#f0c080',
+  playerHair:  '#3a2010',
+  playerSword: '#c0d8f0',
+  playerGlow:  'rgba(91,141,217,0.20)',
+
+  goblin:      '#4a9a50',
+  orc:         '#7a4a20',
+  skeleton:    '#c8c8b0',
+  troll:       '#7040a0',
+  demon:       '#c02020',
+
+  hpHigh:      '#44cc44',
+  hpMid:       '#ccaa00',
+  hpLow:       '#cc3333',
+
+  chestWood:   '#8b5e1a',
+  chestLid:    '#c89a30',
+  chestGem:    '#4cc9f0',
+  chestOpen:   '#3a2808',
+
+  merchantRobe: '#1e3a5a',
+  merchantSkin: '#f0c080',
+  merchantHat:  '#4cc9f0',
+  merchantGold: '#f5c842',
+
+  shadow:      'rgba(0,0,0,0.45)',
+  vignette:    'rgba(0,0,0,0.72)',
 };
 
 function floorTint(floor) {
@@ -371,6 +413,65 @@ function floorTint(floor) {
   const a = (t * 0.18).toFixed(2);
   return `rgba(${r},0,0,${a})`;
 }
+
+// ============================================================
+//  TorchSystem — static wall torches with flickering light
+// ============================================================
+const TorchSystem = {
+  torches: [],
+
+  generate(rooms) {
+    this.torches = [];
+    for (let ty = 1; ty < ROWS - 1; ty++) {
+      for (let tx = 1; tx < COLS - 1; tx++) {
+        if (MapGen.tiles[ty][tx] !== T.WALL) continue;
+        if (MapGen.tiles[ty + 1]?.[tx] === T.FLOOR) {
+          if (Math.random() < 0.14) {
+            this.torches.push({ x: tx, y: ty, phase: Math.random() * Math.PI * 2 });
+          }
+        }
+      }
+    }
+  },
+
+  draw(ctx) {
+    const t = performance.now() / 1000;
+    for (const torch of this.torches) {
+      if (!FogOfWar.isVisible(torch.x, torch.y)) continue;
+      const { sx, sy } = Camera.toScreen(torch.x, torch.y);
+      if (sx < -TS * 3 || sy < -TS * 3 || sx > Camera.vw + TS * 3 || sy > Camera.vh + TS * 3) continue;
+
+      const flicker = 0.85 + 0.15 * Math.sin(t * 7 + torch.phase);
+
+      // Torch body on wall face
+      const tx2 = sx + TS / 2, ty2 = sy + WALL_H + 4;
+      ctx.fillStyle = '#6a4010'; ctx.fillRect(tx2 - 2, ty2, 4, 8);
+      ctx.fillStyle = PAL.torchOrange; ctx.fillRect(tx2 - 3, ty2 - 2, 6, 4);
+
+      // Flame
+      ctx.save();
+      ctx.globalAlpha = flicker;
+      ctx.fillStyle = PAL.torchYellow;
+      ctx.beginPath();
+      ctx.ellipse(tx2, ty2 - 4, 3, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(tx2, ty2 - 5, 1.5, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Light cone on floor below
+      const ly = sy + TS;
+      const g = ctx.createRadialGradient(tx2, ly, 0, tx2, ly, TS * 2.2 * flicker);
+      g.addColorStop(0, 'rgba(255,160,30,0.18)');
+      g.addColorStop(0.5, 'rgba(255,120,10,0.08)');
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.fillRect(sx - TS * 1.5, ly, TS * 4, TS * 2);
+    }
+  }
+};
 
 // ── SKILL DEFINITIONS ─────────────────────────────────────────
 const SKILL_DEFS = {
@@ -833,6 +934,7 @@ const PulseLoop = {
     if(GameState.state!=='EXPLORE') return false;
     if(Math.abs(Camera.shakeX)>0.5||Math.abs(Camera.shakeY)>0.5) return true;
     if(DustParticles.list.length>0) return true;
+    if(TorchSystem.torches.some(t=>FogOfWar.isVisible(t.x,t.y))) return true;
     if(EntityManager.merchant&&dist(EntityManager.merchant,Player)<=1&&FogOfWar.isVisible(EntityManager.merchant.x,EntityManager.merchant.y)) return true;
     for(const ch of EntityManager.chests)
       if(!ch.opened&&dist(ch,Player)<=1&&FogOfWar.isExplored(ch.x,ch.y)) return true;
@@ -872,64 +974,121 @@ const TilePainter = {
 
   // ── FLOOR ─────────────────────────────────────────────────
   floor(ctx,sx,sy,W,H,alt){
-    const t=this._cached(`floor_${W}_${H}_${alt}_${GameState.floor}`,W,H,(c,w,h)=>{
-      const depthShift=Math.min(GameState.floor*2,16);
-      c.fillStyle=alt?`rgb(${28+depthShift},26,45)`:`rgb(${25+depthShift},23,42)`; c.fillRect(0,0,w,h);
-      // Stone grid lines
-      c.strokeStyle=PAL.floorLine; c.lineWidth=0.5;
-      c.strokeRect(0.5,0.5,w-1,h-1);
-      // Subtle diagonal crack
-      c.strokeStyle=alt?'#110f1e':'#131128'; c.lineWidth=0.6;
-      c.beginPath();
-      if(alt){ c.moveTo(w*0.15,h*0.55); c.lineTo(w*0.45,h*0.8); }
-      else   { c.moveTo(w*0.65,h*0.2);  c.lineTo(w*0.88,h*0.6); }
-      c.stroke();
+    const t=this._cached(`floor_${W}_${H}_${alt}`,W,H,(c,w,h)=>{
+      c.fillStyle = alt ? PAL.floorB : PAL.floorA;
+      c.fillRect(0, 0, w, h);
+
+      // Cobblestone block pattern — 2 rows of offset stones
+      const stones = alt
+        ? [{x:1,y:1,w:w*0.55,h:h*0.48},{x:w*0.57,y:1,w:w*0.41,h:h*0.48},
+           {x:1,y:h*0.52,w:w*0.38,h:h*0.46},{x:w*0.41,y:h*0.52,w:w*0.57,h:h*0.46}]
+        : [{x:1,y:1,w:w*0.45,h:h*0.48},{x:w*0.47,y:1,w:w*0.51,h:h*0.48},
+           {x:1,y:h*0.52,w:w*0.62,h:h*0.46},{x:w*0.64,y:h*0.52,w:w*0.34,h:h*0.46}];
+
+      for (const s of stones) {
+        c.fillStyle = alt ? PAL.floorDark : PAL.floorA;
+        c.fillRect(s.x + 1, s.y + 1, s.w - 2, s.h - 2);
+        c.fillStyle = 'rgba(255,255,255,0.07)';
+        c.fillRect(s.x + 1, s.y + 1, s.w - 2, 1);
+        c.fillRect(s.x + 1, s.y + 1, 1, s.h - 2);
+        c.fillStyle = 'rgba(0,0,0,0.18)';
+        c.fillRect(s.x + 1, s.y + s.h - 2, s.w - 2, 1);
+      }
+      // Grout lines
+      c.strokeStyle = PAL.floorJoint;
+      c.lineWidth = 1;
+      for (const s of stones) c.strokeRect(s.x + 0.5, s.y + 0.5, s.w - 1, s.h - 1);
+
+      // Moss patch on ~30% of tiles
+      if ((alt ? 7 : 3) % 10 < 3) {
+        c.fillStyle = PAL.floorMoss;
+        c.globalAlpha = 0.25;
+        c.beginPath();
+        c.ellipse(w * 0.7, h * 0.65, w * 0.12, h * 0.1, 0, 0, Math.PI * 2);
+        c.fill();
+        c.globalAlpha = 1;
+      }
+
+      // Rubble decals on ~12% of tiles
+      const seed = alt ? 13 : 7;
+      if (seed % 9 < 1.1) {
+        c.fillStyle = 'rgba(120,100,80,0.30)';
+        for (let i = 0; i < 3; i++) {
+          const rx = (seed * 37 + i * 17) % (w - 4) + 2;
+          const ry = (seed * 23 + i * 11) % (h - 4) + 2;
+          c.fillRect(rx, ry, 2, 2);
+        }
+      }
     });
     ctx.drawImage(t,sx,sy);
   },
 
   // ── WALL ──────────────────────────────────────────────────
   wall(ctx,sx,sy,W,H,hasFloorS){
-    const t=this._cached(`wall_${W}_${H}_${hasFloorS?1:0}`,W,H,(c,w,h)=>{
-      c.fillStyle=PAL.wallDark; c.fillRect(0,0,w,h);
-      // Brick rows
-      const bh=Math.max(5,Math.floor(h/3)), bw=Math.max(7,Math.floor(w/2));
-      c.fillStyle=PAL.wallFace;
-      // Row 1
-      for(let x=0;x<w;x+=bw) c.fillRect(x+1,1,bw-2,bh-1);
-      // Row 2 (offset by half)
-      for(let x=-bw/2;x<w;x+=bw) c.fillRect(x+1,bh+1,bw-2,bh-1);
-      // Mortar grid
-      c.strokeStyle=PAL.wallMortar; c.lineWidth=1;
-      c.strokeRect(0.5,0.5,w-1,h-1);
-      c.beginPath(); c.moveTo(0,bh); c.lineTo(w,bh); c.stroke();
-      // Top highlight on all walls (lit-from-above)
-      c.fillStyle='#28253e';
-      c.fillRect(0,0,w,1);
-      // Front face lit edge (visible when floor is directly south)
-      if(hasFloorS){ c.fillStyle=PAL.wallLit; c.fillRect(0,0,w,3); }
+    const t=this._cached(`wall_${W}_${H}_${hasFloorS?1:0}`,W,H+WALL_H,(c,w,h)=>{
+      // TOP FACE (lit from above)
+      c.fillStyle = PAL.wallTop;
+      c.fillRect(0, 0, w, WALL_H);
+      c.strokeStyle = PAL.wallEdge; c.lineWidth = 0.5;
+      c.beginPath(); c.moveTo(0, WALL_H); c.lineTo(w, WALL_H); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.10)';
+      c.fillRect(0, 0, w, 2);
+
+      // FRONT FACE
+      const fy = WALL_H;
+      const fh = h - WALL_H;
+      c.fillStyle = PAL.wallFace;
+      c.fillRect(0, fy, w, fh);
+
+      // Brick rows on front face
+      const bh = Math.max(6, Math.floor(fh / 3));
+      const bw = Math.max(8, Math.floor(w / 2));
+      for (let row = 0; row < 3; row++) {
+        const rowY = fy + row * bh;
+        const offset = (row % 2 === 0) ? 0 : bw / 2;
+        for (let bx = -offset; bx < w; bx += bw) {
+          c.fillStyle = row % 2 === 0 ? PAL.wallFace : PAL.wallShadow;
+          if (bx + 1 >= 0 && bx + bw - 2 <= w)
+            c.fillRect(bx + 1, rowY + 1, bw - 2, bh - 2);
+        }
+      }
+      // Mortar lines
+      c.strokeStyle = PAL.wallMortar; c.lineWidth = 1;
+      for (let row = 0; row < 4; row++) {
+        c.beginPath();
+        c.moveTo(0, fy + row * bh); c.lineTo(w, fy + row * bh);
+        c.stroke();
+      }
+      // Left shadow edge
+      c.fillStyle = PAL.wallShadow;
+      c.fillRect(0, fy, 2, fh);
+      // Bottom cast shadow
+      if (hasFloorS) {
+        c.fillStyle = 'rgba(0,0,0,0.35)';
+        c.fillRect(0, h - 4, w, 4);
+      }
     });
-    ctx.drawImage(t,sx,sy);
+    ctx.drawImage(t, sx, sy - WALL_H);
   },
 
   // ── STAIRS ────────────────────────────────────────────────
   stairs(ctx,sx,sy,W,H){
     const t=this._cached(`stairs_${W}_${H}`,W,H,(c,w,h)=>{
       c.fillStyle=PAL.stairBg; c.fillRect(0,0,w,h);
-      // Glow radial
-      const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.55);
+      const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.6);
       g.addColorStop(0,PAL.stairGlow); g.addColorStop(1,'transparent');
       c.fillStyle=g; c.fillRect(0,0,w,h);
-      // Steps
       c.fillStyle=PAL.stairColor;
-      for(let i=0;i<3;i++){
-        const sw=w*(0.65-i*0.12), sh=Math.max(3,Math.floor(h*0.1));
-        c.fillRect((w-sw)/2, h*0.22+i*(sh+3), sw, sh);
+      for(let i=0;i<4;i++){
+        const sw=w*(0.72-i*0.13), sh=Math.max(3,Math.floor(h*0.09));
+        c.fillRect((w-sw)/2, h*0.18+i*(sh+4), sw, sh);
+        c.fillStyle='rgba(255,255,255,0.15)';
+        c.fillRect((w-sw)/2, h*0.18+i*(sh+4), sw, 1);
+        c.fillStyle=PAL.stairColor;
       }
-      // Down arrow
-      c.fillStyle=PAL.stairColor; c.font=`bold ${Math.floor(h*0.32)}px monospace`;
+      c.font=`bold ${Math.floor(h*0.30)}px monospace`;
       c.textAlign='center'; c.textBaseline='middle';
-      c.fillText('▼',w/2,h*0.74);
+      c.fillText('▼',w/2,h*0.78);
     });
     ctx.drawImage(t,sx,sy);
   },
@@ -955,24 +1114,30 @@ const TilePainter = {
 
   // ── CHEST ─────────────────────────────────────────────────
   chest(ctx,sx,sy,W,H,opened){
-    // Draw floor first
     this.floor(ctx,sx,sy,W,H,false);
-    const cw=Math.floor(W*0.68), ch=Math.floor(H*0.52);
+    const cw=Math.floor(W*0.70), ch=Math.floor(H*0.55);
     const cx=sx+(W-cw)/2, cy=sy+(H-ch)/2+2;
     if(!opened){
-      // Body
       ctx.fillStyle=PAL.chestWood; ctx.fillRect(cx,cy,cw,ch);
+      // Plank line
+      ctx.strokeStyle='#6a4a12'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(cx,cy+ch*0.42); ctx.lineTo(cx+cw,cy+ch*0.42); ctx.stroke();
       // Lid
-      ctx.fillStyle=PAL.chestLid; ctx.fillRect(cx,cy,cw,Math.floor(ch*0.38));
+      ctx.fillStyle=PAL.chestLid; ctx.fillRect(cx,cy,cw,Math.floor(ch*0.40));
+      // Metal banding
+      ctx.strokeStyle='#a08020'; ctx.lineWidth=2;
+      ctx.strokeRect(cx+2,cy+2,cw-4,ch-4);
+      // Gem lock
+      ctx.fillStyle=PAL.chestGem;
+      ctx.beginPath(); ctx.arc(cx+cw/2,cy+Math.floor(ch*0.42),4,0,Math.PI*2); ctx.fill();
       // Sheen
-      ctx.fillStyle='rgba(255,230,100,0.18)'; ctx.fillRect(cx+2,cy+2,cw-4,4);
-      // Lock
-      ctx.fillStyle=PAL.chestLock; ctx.fillRect(sx+W/2-2,cy+Math.floor(ch*0.28),4,Math.floor(ch*0.28));
+      ctx.fillStyle='rgba(255,230,100,0.20)';
+      ctx.fillRect(cx+3,cy+3,cw-6,4);
     } else {
-      // Open chest
-      ctx.fillStyle=PAL.chestOpen; ctx.fillRect(cx,cy,cw,Math.floor(ch*0.55));
-      // Lid flipped up
-      ctx.fillStyle=PAL.chestWood; ctx.fillRect(cx,cy-Math.floor(ch*0.42),cw,Math.floor(ch*0.38));
+      ctx.fillStyle=PAL.chestOpen; ctx.fillRect(cx,cy+Math.floor(ch*0.45),cw,Math.floor(ch*0.55));
+      ctx.fillStyle=PAL.chestWood; ctx.fillRect(cx,cy-Math.floor(ch*0.38),cw,Math.floor(ch*0.38));
+      ctx.strokeStyle='#a08020'; ctx.lineWidth=2;
+      ctx.strokeRect(cx+2,cy-Math.floor(ch*0.38)+2,cw-4,Math.floor(ch*0.38)-4);
     }
   },
 
@@ -996,101 +1161,179 @@ const TilePainter = {
   },
 
   // ── ENEMIES ───────────────────────────────────────────────
-  enemy(ctx,sx,sy,W,H,e){
-    const cx=sx+W/2, cy=sy+H*0.46, col=e.col;
+  enemy(ctx,sx,sy,W,H,e,animState){
+    const bob = animState ? Math.sin(animState.bob * Math.PI * 2) * 1.5 : 0;
+    const cx = sx + W / 2;
+    const by = sy + H * 0.52 + bob;
+    const hurtA = animState ? animState.hurtAlpha : 0;
+
     switch(e.type){
-      case 'goblin':
-        // Rounded hunched body
-        ctx.fillStyle=col;
-        ctx.beginPath(); ctx.ellipse(cx,cy,W*0.2,H*0.26,0,0,Math.PI*2); ctx.fill();
-        // Pointy ears
-        ctx.beginPath(); ctx.moveTo(cx-7,cy-8); ctx.lineTo(cx-13,cy-17); ctx.lineTo(cx-3,cy-11); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(cx+7,cy-8); ctx.lineTo(cx+13,cy-17); ctx.lineTo(cx+3,cy-11); ctx.fill();
-        // Eyes
-        ctx.fillStyle='#ffdd00'; ctx.fillRect(cx-5,cy-7,3,3); ctx.fillRect(cx+2,cy-7,3,3);
+      case 'goblin': {
+        ctx.fillStyle=PAL.goblin;
+        ctx.fillRect(cx-W*0.20,by-H*0.18,W*0.40,H*0.28);
+        const hSg=Math.floor(W*0.34);
+        ctx.fillRect(cx-hSg/2,by-H*0.50,hSg,hSg);
+        ctx.fillRect(cx-hSg/2-6,by-H*0.42,6,10);
+        ctx.fillRect(cx+hSg/2,by-H*0.42,6,10);
+        ctx.fillStyle='#ddcc00';
+        ctx.fillRect(cx-hSg*0.28,by-H*0.36,Math.floor(hSg*0.20),Math.floor(hSg*0.16));
+        ctx.fillRect(cx+hSg*0.08,by-H*0.36,Math.floor(hSg*0.20),Math.floor(hSg*0.16));
+        ctx.fillStyle=PAL.goblin;
+        ctx.fillRect(cx-W*0.18,by+H*0.10,W*0.14,H*0.18);
+        ctx.fillRect(cx+W*0.04,by+H*0.10,W*0.14,H*0.18);
         break;
-
-      case 'orc':
-        // Wide stocky torso
-        ctx.fillStyle=col;
-        ctx.fillRect(cx-W*0.26,cy-H*0.28,W*0.52,H*0.56);
-        // Head
-        ctx.beginPath(); ctx.ellipse(cx,cy-H*0.27,W*0.2,H*0.18,0,0,Math.PI*2); ctx.fill();
-        // Tusks
+      }
+      case 'orc': {
+        ctx.fillStyle=PAL.orc;
+        ctx.fillRect(cx-W*0.26,by-H*0.22,W*0.52,H*0.36);
+        const hSo=Math.floor(W*0.38);
+        ctx.fillRect(cx-hSo/2,by-H*0.56,hSo,hSo);
         ctx.fillStyle='#f0e0a0';
-        ctx.fillRect(cx-8,cy-H*0.1,3,7); ctx.fillRect(cx+5,cy-H*0.1,3,7);
+        ctx.fillRect(cx-hSo*0.28,by-H*0.20,5,9);
+        ctx.fillRect(cx+hSo*0.16,by-H*0.20,5,9);
+        ctx.fillStyle='#cc2200';
+        ctx.fillRect(cx-hSo*0.22,by-H*0.42,Math.floor(hSo*0.20),Math.floor(hSo*0.18));
+        ctx.fillRect(cx+hSo*0.04,by-H*0.42,Math.floor(hSo*0.20),Math.floor(hSo*0.18));
+        ctx.fillStyle=PAL.orc;
+        ctx.fillRect(cx-W*0.38,by-H*0.14,W*0.14,H*0.30);
+        ctx.fillRect(cx+W*0.24,by-H*0.14,W*0.14,H*0.30);
         break;
-
-      case 'skeleton':
-        // Skull
-        ctx.fillStyle=col;
-        ctx.beginPath(); ctx.ellipse(cx,cy-H*0.24,W*0.18,H*0.18,0,0,Math.PI*2); ctx.fill();
-        // Eye sockets
-        ctx.fillStyle='#111';
-        ctx.fillRect(cx-7,cy-H*0.3,4,4); ctx.fillRect(cx+3,cy-H*0.3,4,4);
-        // Rib cage arcs
-        ctx.strokeStyle=col; ctx.lineWidth=1.5;
+      }
+      case 'skeleton': {
+        ctx.fillStyle=PAL.skeleton;
+        ctx.fillRect(cx-W*0.16,by-H*0.18,W*0.32,H*0.28);
+        ctx.strokeStyle='#888888'; ctx.lineWidth=1;
         for(let i=0;i<3;i++){
-          ctx.beginPath(); ctx.ellipse(cx,cy-H*0.02+i*5,W*0.18-i*2,3,0,0,Math.PI*2); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx-W*0.14,by-H*0.12+i*5);
+          ctx.lineTo(cx+W*0.14,by-H*0.12+i*5);
+          ctx.stroke();
         }
+        const hSs=Math.floor(W*0.32);
+        ctx.fillStyle=PAL.skeleton;
+        ctx.fillRect(cx-hSs/2,by-H*0.50,hSs,hSs);
+        ctx.fillStyle='#111111';
+        ctx.fillRect(cx-hSs*0.28,by-H*0.38,Math.floor(hSs*0.22),Math.floor(hSs*0.22));
+        ctx.fillRect(cx+hSs*0.06,by-H*0.38,Math.floor(hSs*0.22),Math.floor(hSs*0.22));
+        ctx.fillRect(cx-2,by-H*0.22,4,4);
+        ctx.fillStyle=PAL.skeleton;
+        ctx.fillRect(cx-W*0.28,by-H*0.14,W*0.12,H*0.26);
+        ctx.fillRect(cx+W*0.16,by-H*0.14,W*0.12,H*0.26);
         break;
-
-      case 'troll':
-        // Big hulking mass
-        ctx.fillStyle=col;
-        ctx.beginPath(); ctx.ellipse(cx,cy,W*0.35,H*0.4,0,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(cx,cy-H*0.3,W*0.24,H*0.21,0,0,Math.PI*2); ctx.fill();
-        // Angry eyes
-        ctx.fillStyle='#ff2200';
-        ctx.fillRect(cx-7,cy-H*0.34,4,4); ctx.fillRect(cx+3,cy-H*0.34,4,4);
+      }
+      case 'troll': {
+        ctx.fillStyle=PAL.troll;
+        ctx.fillRect(cx-W*0.32,by-H*0.28,W*0.64,H*0.46);
+        const hSt=Math.floor(W*0.42);
+        ctx.fillRect(cx-hSt/2,by-H*0.66,hSt,hSt);
+        ctx.fillStyle='#ff3300';
+        ctx.fillRect(cx-hSt*0.26,by-H*0.52,Math.floor(hSt*0.22),Math.floor(hSt*0.18));
+        ctx.fillRect(cx+hSt*0.04,by-H*0.52,Math.floor(hSt*0.22),Math.floor(hSt*0.18));
+        ctx.fillStyle=PAL.troll;
+        ctx.fillRect(cx-W*0.46,by-H*0.20,W*0.16,H*0.36);
+        ctx.fillRect(cx+W*0.30,by-H*0.20,W*0.16,H*0.36);
+        ctx.fillStyle='#5a3a10';
+        ctx.fillRect(cx+W*0.44,by-H*0.38,W*0.14,H*0.46);
+        ctx.fillRect(cx+W*0.38,by-H*0.38,W*0.26,H*0.14);
         break;
-
-      case 'demon':
-        // Body
-        ctx.fillStyle=col;
-        ctx.beginPath(); ctx.ellipse(cx,cy,W*0.22,H*0.32,0,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(cx,cy-H*0.28,W*0.16,H*0.16,0,0,Math.PI*2); ctx.fill();
-        // Wings
-        ctx.fillStyle=col+'99';
-        ctx.beginPath(); ctx.moveTo(cx,cy-H*0.1); ctx.lineTo(cx-W*0.5,cy-H*0.38); ctx.lineTo(cx-W*0.18,cy+H*0.12); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(cx,cy-H*0.1); ctx.lineTo(cx+W*0.5,cy-H*0.38); ctx.lineTo(cx+W*0.18,cy+H*0.12); ctx.fill();
-        // Eyes
+      }
+      case 'demon': {
+        ctx.fillStyle=PAL.demon;
+        ctx.fillRect(cx-W*0.22,by-H*0.24,W*0.44,H*0.38);
+        const hSd=Math.floor(W*0.36);
+        ctx.fillRect(cx-hSd/2,by-H*0.58,hSd,hSd);
+        ctx.fillStyle='#601010';
+        ctx.fillRect(cx-hSd/2+2,by-H*0.58-10,6,12);
+        ctx.fillRect(cx+hSd/2-8,by-H*0.58-10,6,12);
         ctx.fillStyle='#ffee00';
-        ctx.fillRect(cx-6,cy-H*0.31,4,4); ctx.fillRect(cx+2,cy-H*0.31,4,4);
+        ctx.fillRect(cx-hSd*0.24,by-H*0.46,Math.floor(hSd*0.20),Math.floor(hSd*0.20));
+        ctx.fillRect(cx+hSd*0.04,by-H*0.46,Math.floor(hSd*0.20),Math.floor(hSd*0.20));
+        ctx.fillStyle=PAL.demon+'aa';
+        ctx.beginPath();
+        ctx.moveTo(cx-W*0.22,by-H*0.10);
+        ctx.lineTo(cx-W*0.55,by-H*0.50);
+        ctx.lineTo(cx-W*0.18,by+H*0.16);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx+W*0.22,by-H*0.10);
+        ctx.lineTo(cx+W*0.55,by-H*0.50);
+        ctx.lineTo(cx+W*0.18,by+H*0.16);
+        ctx.fill();
         break;
+      }
+    }
+
+    // Hurt flash overlay
+    if(hurtA>0){
+      ctx.save(); ctx.globalAlpha=hurtA*0.7;
+      ctx.fillStyle='#ffffff'; ctx.fillRect(sx,sy,W,H);
+      ctx.restore();
     }
   },
 
   // ── PLAYER ────────────────────────────────────────────────
-  player(ctx,sx,sy,W,H){
-    const cx=sx+W/2, cy=sy+H*0.48;
-    // Ambient glow
-    const g=ctx.createRadialGradient(cx,cy,2,cx,cy,W);
-    g.addColorStop(0,PAL.playerGlow); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.fillRect(sx-W,sy-H,W*3,H*3);
-    // Robe
-    ctx.fillStyle=PAL.playerRobe;
-    ctx.beginPath();
-    ctx.moveTo(cx-W*0.2,cy+H*0.37); ctx.lineTo(cx+W*0.2,cy+H*0.37);
-    ctx.lineTo(cx+W*0.17,cy-H*0.08); ctx.lineTo(cx-W*0.17,cy-H*0.08); ctx.fill();
-    // Head
-    ctx.fillStyle=PAL.playerSkin;
-    ctx.beginPath(); ctx.ellipse(cx,cy-H*0.21,W*0.15,H*0.16,0,0,Math.PI*2); ctx.fill();
-    // Wizard hat
-    ctx.fillStyle=PAL.playerHat;
-    ctx.beginPath(); ctx.moveTo(cx-W*0.18,cy-H*0.16); ctx.lineTo(cx,cy-H*0.52); ctx.lineTo(cx+W*0.18,cy-H*0.16); ctx.fill();
-    // Hat band
-    ctx.fillStyle='#6040a0'; ctx.fillRect(cx-W*0.19,cy-H*0.2,W*0.38,3);
-    // Staff
-    ctx.strokeStyle=PAL.playerStaff; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(cx+W*0.22,cy-H*0.04); ctx.lineTo(cx+W*0.32,cy-H*0.5); ctx.stroke();
-    // Gem
-    ctx.fillStyle=PAL.playerGem;
-    ctx.beginPath(); ctx.arc(cx+W*0.32,cy-H*0.52,3,0,Math.PI*2); ctx.fill();
-    // Gem glow
-    const gg=ctx.createRadialGradient(cx+W*0.32,cy-H*0.52,0,cx+W*0.32,cy-H*0.52,8);
-    gg.addColorStop(0,'rgba(96,240,255,0.5)'); gg.addColorStop(1,'transparent');
-    ctx.fillStyle=gg; ctx.fillRect(cx+W*0.1,cy-H*0.65,W*0.45,H*0.3);
+  player(ctx,sx,sy,W,H,animState){
+    const bob = animState ? Math.sin(animState.bob * Math.PI * 2) * 2 : 0;
+    const cx = sx + W / 2;
+    const baseY = sy + H * 0.52 + bob;
+
+    // Glow
+    const g = ctx.createRadialGradient(cx, baseY, 2, cx, baseY, W * 0.9);
+    g.addColorStop(0, PAL.playerGlow); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.fillRect(sx - W * 0.5, sy - H * 0.3, W * 2, H * 1.6);
+
+    // Shadow ellipse
+    ctx.fillStyle = PAL.shadow;
+    ctx.beginPath(); ctx.ellipse(cx, sy + H * 0.88, W * 0.25, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Legs
+    ctx.fillStyle = '#2a4a8a';
+    const legW = Math.floor(W * 0.18), legH = Math.floor(H * 0.22);
+    ctx.fillRect(cx - legW - 2, baseY + H * 0.12, legW, legH);
+    ctx.fillRect(cx + 2,        baseY + H * 0.12, legW, legH);
+
+    // Body
+    const bW = Math.floor(W * 0.44), bH = Math.floor(H * 0.30);
+    ctx.fillStyle = PAL.playerBody;
+    ctx.fillRect(cx - bW / 2, baseY - H * 0.18, bW, bH);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(cx - bW / 2 + 2, baseY - H * 0.18 + 2, bW - 4, 3);
+
+    // Left arm
+    const aW = Math.floor(W * 0.16), aH = Math.floor(H * 0.28);
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(cx - bW / 2 - aW, baseY - H * 0.16, aW, aH);
+
+    // Sword arm with swing rotation
+    ctx.save();
+    ctx.translate(cx + bW / 2, baseY - H * 0.08);
+    ctx.rotate(animState ? animState.swingAngle * 0.8 : 0);
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(0, -aH * 0.3, aW, aH);
+    ctx.fillStyle = PAL.playerSword;
+    ctx.fillRect(aW - 2, -aH * 0.8, 4, aH * 1.1);
+    ctx.fillStyle = '#8060a0';
+    ctx.fillRect(aW - 5, -aH * 0.3, 10, 3);
+    ctx.restore();
+
+    // Block head
+    const hS = Math.floor(W * 0.36);
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(cx - hS / 2, baseY - H * 0.52, hS, hS);
+    ctx.fillStyle = '#402010';
+    ctx.fillRect(cx - hS * 0.28, baseY - H * 0.38, Math.floor(hS * 0.18), Math.floor(hS * 0.18));
+    ctx.fillRect(cx + hS * 0.10, baseY - H * 0.38, Math.floor(hS * 0.18), Math.floor(hS * 0.18));
+    ctx.fillStyle = PAL.playerHair;
+    ctx.fillRect(cx - hS / 2, baseY - H * 0.52, hS, Math.floor(hS * 0.28));
+
+    // Hurt overlay
+    if(animState && animState.hurtAlpha > 0){
+      ctx.save();
+      ctx.globalAlpha = animState.hurtAlpha * 0.65;
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(cx - bW / 2 - 2, baseY - H * 0.52, bW + 4, H * 0.65);
+      ctx.restore();
+    }
   },
 };
 
@@ -1187,7 +1430,7 @@ const EntityManager = {
       const dmg=Player.takeDamage(e.atk);
       Logger.add(`${e.name} hits you for ${dmg}!`,'dmg');
       Floaters.add(Player.x,Player.y,dmg,'#e8e8f0');
-      Camera.shake(4); triggerHitStop(70); hit=true;
+      Camera.shake(4); triggerHitStop(70); AnimSystem.onEnemyHurt(e.id); hit=true;
     }
     if(hit) flashScreen();
   },
@@ -1223,12 +1466,14 @@ const CombatSystem = {
     Audio.play('skill');
 
     if(sid==='shadowstep'){
+      const oldX=Player.x, oldY=Player.y;
       const p=MapGen.randomFloorInRoom(MapGen.rooms);
       if(!p||EntityManager.at(p.x,p.y)){
         Player.mp+=def.manaCost; // refund
         Logger.add('Shadow Step fizzled — no clear destination!','warn'); return false;
       }
       Player.x=p.x; Player.y=p.y;
+      FXSystem.add('shadowPuff',oldX,oldY,'#330044');
       Logger.add('Shadow Step! Teleported.','skill'); return true;
     }
 
@@ -1239,6 +1484,9 @@ const CombatSystem = {
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
+        AnimSystem.onEnemyHurt(e.id);
+        if(sid==='thunderstrike') FXSystem.add('lightning',e.x,e.y,'#ffee44');
+        else if(sid==='spiritwave') FXSystem.add('burst',e.x,e.y,'#44aaff');
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
       }
@@ -1249,6 +1497,10 @@ const CombatSystem = {
       const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
+      AnimSystem.onEnemyHurt(t.id);
+      if(sid==='fireball') FXSystem.add('burst',t.x,t.y,'#ff6600');
+      else if(sid==='icebolt') FXSystem.add('iceShards',t.x,t.y,'#88ccff');
+      else if(sid==='vampiricblow') FXSystem.add('burst',t.x,t.y,'#cc2244');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
       if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
@@ -1362,6 +1614,160 @@ const MerchantSystem = {
 };
 
 // ============================================================
+//  AnimSystem — visual-only tweened positions & animation states
+// ============================================================
+const AnimSystem = {
+  playerVX: 2, playerVY: 2,
+  playerBob: 0, playerSwing: 0, playerHurt: 0,
+  _stepPhase: 0,
+  enemyVX: {}, enemyVY: {}, enemyBob: {}, enemyHurt: {},
+  running: false,
+
+  onPlayerMove() { this._stepPhase += 0.25; this.playerBob = this._stepPhase; this.startLoop(); },
+  onPlayerAttack() { this.playerSwing = 1.0; this.startLoop(); },
+  onPlayerHurt() { this.playerHurt = 1.0; this.startLoop(); },
+  onEnemyHurt(id) { this.enemyHurt[id] = 1.0; this.startLoop(); },
+  onFloorChange() {
+    this.playerVX = Player.x; this.playerVY = Player.y;
+    this.enemyVX = {}; this.enemyVY = {}; this.enemyBob = {}; this.enemyHurt = {};
+  },
+
+  _needsUpdate() {
+    if (Math.abs(this.playerVX - Player.x) > 0.01 || Math.abs(this.playerVY - Player.y) > 0.01) return true;
+    if (this.playerSwing > 0.01 || this.playerHurt > 0.01) return true;
+    if (FXSystem.effects.length > 0) return true;
+    for (const id in this.enemyHurt) if (this.enemyHurt[id] > 0.01) return true;
+    for (const e of EntityManager.enemies) {
+      if (!e.alive) continue;
+      const vx = this.enemyVX[e.id] ?? e.x;
+      const vy = this.enemyVY[e.id] ?? e.y;
+      if (Math.abs(vx - e.x) > 0.01 || Math.abs(vy - e.y) > 0.01) return true;
+    }
+    return false;
+  },
+
+  update() {
+    const sp = 0.18;
+    this.playerVX += (Player.x - this.playerVX) * sp * 3.5;
+    this.playerVY += (Player.y - this.playerVY) * sp * 3.5;
+    if (Math.abs(this.playerVX - Player.x) < 0.01) this.playerVX = Player.x;
+    if (Math.abs(this.playerVY - Player.y) < 0.01) this.playerVY = Player.y;
+    this.playerSwing *= 0.78;
+    this.playerHurt *= 0.82;
+    const moving = Math.abs(this.playerVX - Player.x) > 0.05 || Math.abs(this.playerVY - Player.y) > 0.05;
+    if (moving) this.playerBob += 0.04;
+    for (const e of EntityManager.enemies) {
+      if (!(e.id in this.enemyVX)) { this.enemyVX[e.id] = e.x; this.enemyVY[e.id] = e.y; }
+      this.enemyVX[e.id] += (e.x - this.enemyVX[e.id]) * sp * 2.8;
+      this.enemyVY[e.id] += (e.y - this.enemyVY[e.id]) * sp * 2.8;
+      if (Math.abs(this.enemyVX[e.id] - e.x) < 0.01) this.enemyVX[e.id] = e.x;
+      if (Math.abs(this.enemyVY[e.id] - e.y) < 0.01) this.enemyVY[e.id] = e.y;
+      if (e.id in this.enemyHurt) this.enemyHurt[e.id] *= 0.80;
+      if (!(e.id in this.enemyBob)) this.enemyBob[e.id] = Math.random();
+      if (e.alive && FogOfWar.isVisible(e.x, e.y)) this.enemyBob[e.id] += 0.012;
+    }
+    FXSystem.update();
+  },
+
+  startLoop() {
+    if (this.running) return;
+    this.running = true;
+    const tick = () => {
+      if (!this._needsUpdate()) { this.running = false; Renderer.draw(); return; }
+      this.update();
+      Renderer.draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+
+  getPlayerAnim() {
+    return { bob: this.playerBob, swingAngle: this.playerSwing * Math.PI * 0.6, hurtAlpha: this.playerHurt };
+  },
+  getEnemyAnim(id) {
+    return { bob: this.enemyBob[id] || 0, hurtAlpha: this.enemyHurt[id] || 0 };
+  }
+};
+
+// ============================================================
+//  FXSystem — temporary canvas particle effects
+// ============================================================
+const FXSystem = {
+  effects: [],
+  _maxAges: { burst:400, swingArc:250, iceShards:500, lightning:300, shadowPuff:400 },
+
+  add(type, x, y, color, extra) {
+    this.effects.push({ type, x, y, color: color||'#ffffff', extra: extra||{}, age: 0,
+      maxAge: this._maxAges[type]||400 });
+    AnimSystem.startLoop();
+  },
+
+  update() {
+    this.effects = this.effects.filter(fx => { fx.age += 16; return fx.age < fx.maxAge; });
+  },
+
+  draw(ctx) {
+    for (const fx of this.effects) {
+      const { sx, sy } = Camera.toScreen(fx.x, fx.y);
+      const t = fx.age / fx.maxAge;
+      const alpha = 1 - t;
+
+      if (fx.type === 'burst') {
+        const r = t * TS * 1.8;
+        ctx.save(); ctx.globalAlpha = alpha * 0.7;
+        ctx.strokeStyle = fx.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(sx+TS/2, sy+TS/2, r, 0, Math.PI*2); ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const angle = (i/8)*Math.PI*2+t;
+          const pr = t * TS * 1.4;
+          ctx.fillStyle = fx.color; ctx.globalAlpha = alpha * 0.8;
+          ctx.beginPath();
+          ctx.arc(sx+TS/2+Math.cos(angle)*pr, sy+TS/2+Math.sin(angle)*pr, 3*(1-t), 0, Math.PI*2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      if (fx.type === 'swingArc') {
+        ctx.save(); ctx.globalAlpha = alpha * 0.5;
+        ctx.strokeStyle = '#c0e0ff'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(sx+TS/2, sy+TS/2, TS*0.7, -0.8+t*1.2, 0.4+t*1.2);
+        ctx.stroke(); ctx.restore();
+      }
+      if (fx.type === 'iceShards') {
+        for (let i = 0; i < 6; i++) {
+          const angle = (i/6)*Math.PI*2;
+          const r = t * TS * 1.2;
+          ctx.save(); ctx.globalAlpha = alpha;
+          ctx.fillStyle = '#aaddff';
+          ctx.translate(sx+TS/2+Math.cos(angle)*r, sy+TS/2+Math.sin(angle)*r);
+          ctx.rotate(angle); ctx.fillRect(-2,-6,4,12); ctx.restore();
+        }
+      }
+      if (fx.type === 'lightning') {
+        ctx.save(); ctx.globalAlpha = alpha * 0.8;
+        ctx.strokeStyle = '#ffee44'; ctx.lineWidth = 2*(1-t*0.5);
+        ctx.shadowColor = '#ffee44'; ctx.shadowBlur = 8;
+        ctx.beginPath();
+        let lx = sx+TS/2, ly = sy-TS; ctx.moveTo(lx, ly);
+        for (let seg = 0; seg < 5; seg++) {
+          lx += (Math.sin(fx.age*0.1+seg*1.3)-0.5)*16;
+          ly += TS * 0.4; ctx.lineTo(lx, ly);
+        }
+        ctx.stroke(); ctx.restore();
+      }
+      if (fx.type === 'shadowPuff') {
+        const r = t * TS * 1.0;
+        ctx.save(); ctx.globalAlpha = (1-t)*0.5;
+        ctx.fillStyle = '#330044';
+        ctx.beginPath(); ctx.arc(sx+TS/2, sy+TS/2, r, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+};
+
+// ============================================================
 //  Renderer — layered drawing pipeline
 //  Layers (bottom to top):
 //    1. Floor tiles
@@ -1397,7 +1803,7 @@ const Renderer = {
 
   draw(){
     const ctx=this.ctx;
-    Camera.follow(Player.x,Player.y);
+    Camera.follow(AnimSystem.playerVX, AnimSystem.playerVY);
     // Black base (unseen tiles)
     ctx.fillStyle='#000'; ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
 
@@ -1470,12 +1876,13 @@ const Renderer = {
     const deadToRemove=[];
     for(const e of EntityManager.enemies){
       if(!FogOfWar.isVisible(e.x,e.y)) continue;
-      const {sx,sy}=Camera.toScreen(e.x,e.y);
-      if(!this._vis(sx,sy)) continue;
+      const esx = (AnimSystem.enemyVX[e.id] ?? e.x) * TS - Camera.x;
+      const esy = (AnimSystem.enemyVY[e.id] ?? e.y) * TS - Camera.y;
+      if(!this._vis(esx,esy)) continue;
       if(!e.alive&&e.deathFlash>0){
         const flashAlpha=e.deathFlash/8;
         ctx.save(); ctx.globalAlpha=flashAlpha*0.85;
-        ctx.fillStyle='#ffffff'; ctx.fillRect(sx,sy,TS,TS);
+        ctx.fillStyle='#ffffff'; ctx.fillRect(esx,esy,TS,TS);
         ctx.restore();
         e.deathFlash--;
         if(e.deathFlash===0) deadToRemove.push(e);
@@ -1483,12 +1890,12 @@ const Renderer = {
       }
       if(!e.alive) continue;
       ctx.fillStyle='rgba(0,0,0,0.3)';
-      ctx.beginPath(); ctx.ellipse(sx+TS/2,sy+TS-5,TS*0.28,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.enemy(ctx,sx,sy,TS,TS,e);
-      const bw=TS-4, bx=sx+2, by=sy+TS-6;
+      ctx.beginPath(); ctx.ellipse(esx+TS/2,esy+TS-5,TS*0.28,4,0,0,Math.PI*2); ctx.fill();
+      TilePainter.enemy(ctx,esx,esy,TS,TS,e,AnimSystem.getEnemyAnim(e.id));
+      const bw=TS-4, bx=esx+2, by=esy+TS-6;
       const ratio=clamp(e.hp/e.maxHp,0,1);
       ctx.fillStyle='#1a0000'; ctx.fillRect(bx,by,bw,3);
-      ctx.fillStyle=ratio>0.4?PAL.hpHigh:PAL.hpLow;
+      ctx.fillStyle=ratio>0.5?PAL.hpHigh:ratio>0.25?PAL.hpMid:PAL.hpLow;
       ctx.fillRect(bx,by,Math.floor(bw*ratio),3);
     }
     for(const e of deadToRemove){
@@ -1498,39 +1905,59 @@ const Renderer = {
 
     // ── Layer 6: Player ──────────────────────────────────────
     {
-      const {sx,sy}=Camera.toScreen(Player.x,Player.y);
+      const psx = AnimSystem.playerVX * TS - Camera.x;
+      const psy = AnimSystem.playerVY * TS - Camera.y;
       ctx.fillStyle='rgba(0,0,0,0.25)';
-      ctx.beginPath(); ctx.ellipse(sx+TS/2,sy+TS-5,TS*0.26,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.player(ctx,sx,sy,TS,TS);
+      ctx.beginPath(); ctx.ellipse(psx+TS/2,psy+TS-5,TS*0.26,4,0,0,Math.PI*2); ctx.fill();
+      TilePainter.player(ctx,psx,psy,TS,TS,AnimSystem.getPlayerAnim());
     }
 
     // ── Layer 7: Fog of War overlay ──────────────────────────
-    // Two passes: explored-dark tiles get semi-transparent overlay;
-    // unexplored tiles are covered with solid black.
     for(let ty=y0;ty<=y1;ty++){
       for(let tx=x0;tx<=x1;tx++){
         const {sx,sy}=Camera.toScreen(tx,ty);
         if(FogOfWar.isVisible(tx,ty)){
-          // Fully lit — no overlay
+          // fully lit — no overlay
         } else if(FogOfWar.isExplored(tx,ty)){
-          ctx.fillStyle='rgba(10,8,30,0.50)'; ctx.fillRect(sx,sy,TS,TS);
+          ctx.fillStyle=PAL.fogExplored; ctx.fillRect(sx,sy,TS,TS);
         } else {
           ctx.fillStyle='#000'; ctx.fillRect(sx,sy,TS,TS);
         }
       }
     }
 
-    // ── Layer 8: Floor depth tint ────────────────────────────
-    if(GameState.floor>1){
-      ctx.fillStyle=floorTint(GameState.floor);
+    // ── Layer 8: Torch light (after fog, so glow sits on top) ─
+    TorchSystem.draw(ctx);
+
+    // ── Layer 9: Player ambient light ────────────────────────
+    {
+      const px = AnimSystem.playerVX * TS - Camera.x + TS/2;
+      const py = AnimSystem.playerVY * TS - Camera.y + TS/2;
+      const playerLight = ctx.createRadialGradient(px,py,0,px,py,TS*3.5);
+      playerLight.addColorStop(0,   'rgba(220,220,255,0.10)');
+      playerLight.addColorStop(0.5, 'rgba(180,180,255,0.05)');
+      playerLight.addColorStop(1,   'transparent');
+      ctx.fillStyle = playerLight;
       ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
     }
 
-    // ── Layer 9: Dust particles ──────────────────────────────
+    // ── Layer 10: Dust particles ─────────────────────────────
     DustParticles.draw(ctx);
 
-    // ── Layer 10: Floaters ───────────────────────────────────
+    // ── Layer 11: FX effects ──────────────────────────────────
+    FXSystem.draw(ctx);
+
+    // ── Layer 12: Floaters ────────────────────────────────────
     Floaters.draw(ctx);
+
+    // ── Layer 13: Vignette ────────────────────────────────────
+    {
+      const vw=this.canvas.width, vh=this.canvas.height;
+      const vg=ctx.createRadialGradient(vw/2,vh/2,vh*0.25,vw/2,vh/2,vh*0.85);
+      vg.addColorStop(0,'transparent');
+      vg.addColorStop(1,PAL.vignette);
+      ctx.fillStyle=vg; ctx.fillRect(0,0,vw,vh);
+    }
 
     // ── Minimap ──────────────────────────────────────────────
     Minimap.draw();
@@ -1831,6 +2258,8 @@ const Game = {
       const last=rooms[rooms.length-1];
       MapGen.tiles[last.cy][last.cx]=T.EXIT;
     }
+    AnimSystem.onFloorChange();
+    TorchSystem.generate(rooms);
     FogOfWar.init();
     FogOfWar.update(Player.x,Player.y);
     DustParticles.list=[]; DustParticles.startLoop();
@@ -1856,6 +2285,7 @@ const Game = {
     const e=EntityManager.at(nx,ny);
     if(e){ CombatSystem.attack(e); this.endTurn(); return; }
     Player.x=nx; Player.y=ny;
+    AnimSystem.onPlayerMove();
     const tile=MapGen.tiles[ny][nx];
     if(tile===T.STAIRS||tile===T.EXIT){
       if(!GameState.onStairs){
@@ -1872,7 +2302,10 @@ const Game = {
   tryAttack(){
     const t=EntityManager.enemies.find(e=>e.alive&&dist(e,Player)===1);
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
-    CombatSystem.attack(t); this.endTurn();
+    CombatSystem.attack(t);
+    FXSystem.add('swingArc',Player.x,Player.y,'#c0e0ff');
+    AnimSystem.onPlayerAttack();
+    this.endTurn();
   },
   trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
   tryQuickUse(){
@@ -2114,9 +2547,9 @@ const DustParticles = {
 // Wire Player.levelUp audio
 const _origLevelUp=Player.levelUp.bind(Player);
 Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); flashScreen('gold'); };
-// Wire Player.takeDamage audio
+// Wire Player.takeDamage audio + hurt anim
 const _origTakeDamage=Player.takeDamage.bind(Player);
-Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0) Audio.play('hit'); return v; };
+Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); AnimSystem.onPlayerHurt(); } return v; };
 
 // ── Boot ──────────────────────────────────────────────────────
 Game.init();
