@@ -969,24 +969,30 @@ const TilePainter = {
     const t=this._cached(`floor_${W}_${H}_${alt}`,W,H,(c,w,h)=>{
       c.fillStyle = alt ? PAL.floorB : PAL.floorA;
       c.fillRect(0,0,w,h);
-      // Two horizontal stone slabs per tile
+      // 4 stone slabs: 2 rows × 2 cols, vertical seam offset between rows
       const mid = Math.floor(h/2);
-      // Top slab highlight
-      c.fillStyle = 'rgba(255,255,255,0.05)';
-      c.fillRect(1,1,w-2,mid-2);
-      c.fillStyle = 'rgba(0,0,0,0.12)';
-      c.fillRect(1,mid-2,w-2,1);
-      // Bottom slab shadow
-      c.fillStyle = 'rgba(0,0,0,0.08)';
-      c.fillRect(1,mid+1,w-2,h-mid-2);
-      // Horizontal grout line
+      const v1 = alt ? Math.floor(w*0.54) : Math.floor(w*0.44);
+      const v2 = alt ? Math.floor(w*0.38) : Math.floor(w*0.62);
+      const stones = [
+        {x:1,     y:1,      w:v1-2,       h:mid-2},
+        {x:v1+1,  y:1,      w:w-v1-2,     h:mid-2},
+        {x:1,     y:mid+1,  w:v2-2,       h:h-mid-2},
+        {x:v2+1,  y:mid+1,  w:w-v2-2,     h:h-mid-2},
+      ];
+      for(const s of stones){
+        c.fillStyle = alt ? PAL.floorDark : PAL.floorA;
+        c.fillRect(s.x, s.y, s.w, s.h);
+        c.fillStyle = 'rgba(255,255,255,0.07)';
+        c.fillRect(s.x, s.y, s.w, 1);
+        c.fillRect(s.x, s.y, 1, s.h);
+        c.fillStyle = 'rgba(0,0,0,0.18)';
+        c.fillRect(s.x, s.y+s.h-1, s.w, 1);
+      }
+      // Grout lines
       c.fillStyle = PAL.floorLine;
-      c.fillRect(0,mid,w,1);
-      // Vertical grout — offset between rows
-      const vx = alt ? Math.floor(w*0.55) : Math.floor(w*0.40);
-      c.fillRect(vx,1,1,mid-1);
-      c.fillRect(w-vx,mid+1,1,h-mid-2);
-      // Subtle moss on alt tiles
+      c.fillRect(0, mid, w, 1);
+      c.fillRect(v1, 0, 1, mid);
+      c.fillRect(v2, mid, 1, h-mid);
       if(alt){
         c.fillStyle = PAL.floorMoss;
         c.globalAlpha = 0.18;
@@ -1413,7 +1419,7 @@ const CombatSystem = {
     const dmg=Math.max(1,Player.totalAtk-enemy.def+rng(-2,2));
     enemy.hp-=dmg; Logger.add(`You hit ${enemy.name} for ${dmg}`,'');
     Floaters.add(enemy.x,enemy.y,dmg,'#e63946');
-    Audio.play('attack'); triggerHitStop(70);
+    Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(enemy.id);
     if(enemy.hp<=0){
       enemy.alive=false; enemy.deathFlash=8;
       Audio.play('death');
@@ -1452,6 +1458,7 @@ const CombatSystem = {
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
+        AnimSystem.hurtEnemy(e.id);
         if(sid==='thunderstrike') FXSystem.spawn('lightning',e.x,e.y,'#ffee44');
         else if(sid==='spiritwave') FXSystem.spawn('burst',e.x,e.y,'#44aaff');
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
@@ -1464,6 +1471,7 @@ const CombatSystem = {
       const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
+      AnimSystem.hurtEnemy(t.id);
       if(sid==='fireball') FXSystem.spawn('burst',t.x,t.y,'#ff6600');
       else if(sid==='icebolt') FXSystem.spawn('burst',t.x,t.y,'#88ccff');
       else if(sid==='vampiricblow') FXSystem.spawn('burst',t.x,t.y,'#cc2244');
@@ -1584,18 +1592,23 @@ const MerchantSystem = {
 // ============================================================
 const AnimSystem = {
   pvx: 0, pvy: 0,
-  evx: {}, evy: {},
+  evx: {}, evy: {}, evhurt: {},
+  playerSwing: 0, playerHurt: 0,
   _bob: 0, running: false,
 
   init() {
     this.pvx = Player.x; this.pvy = Player.y;
-    this.evx = {}; this.evy = {};
+    this.evx = {}; this.evy = {}; this.evhurt = {};
+    this.playerSwing = 0; this.playerHurt = 0;
   },
 
   snap() {
     this.pvx = Player.x; this.pvy = Player.y;
-    this.evx = {}; this.evy = {};
+    this.evx = {}; this.evy = {}; this.evhurt = {};
+    this.playerSwing = 0; this.playerHurt = 0;
   },
+
+  hurtEnemy(id) { this.evhurt[id] = 1.0; this.start(); },
 
   trigger() { this._bob += 0.25; this.start(); },
 
@@ -1619,7 +1632,9 @@ const AnimSystem = {
 
   _needsUpdate() {
     if (Math.abs(this.pvx - Player.x) > 0.01 || Math.abs(this.pvy - Player.y) > 0.01) return true;
+    if (this.playerSwing > 0.01 || this.playerHurt > 0.01) return true;
     if (FXSystem.effects.length > 0) return true;
+    for (const id in this.evhurt) if (this.evhurt[id] > 0.01) return true;
     for (const e of EntityManager.enemies) {
       if (!e.alive) continue;
       if (Math.abs((this.evx[e.id] ?? e.x) - e.x) > 0.01) return true;
@@ -1634,12 +1649,15 @@ const AnimSystem = {
     this.pvy += (Player.y - this.pvy) * sp * 3.5;
     if (Math.abs(this.pvx - Player.x) < 0.01) this.pvx = Player.x;
     if (Math.abs(this.pvy - Player.y) < 0.01) this.pvy = Player.y;
+    this.playerSwing *= 0.78;
+    this.playerHurt  *= 0.82;
     for (const e of EntityManager.enemies) {
       if (!(e.id in this.evx)) { this.evx[e.id] = e.x; this.evy[e.id] = e.y; }
       this.evx[e.id] += (e.x - this.evx[e.id]) * sp * 2.8;
       this.evy[e.id] += (e.y - this.evy[e.id]) * sp * 2.8;
       if (Math.abs(this.evx[e.id] - e.x) < 0.01) this.evx[e.id] = e.x;
       if (Math.abs(this.evy[e.id] - e.y) < 0.01) this.evy[e.id] = e.y;
+      if (e.id in this.evhurt) this.evhurt[e.id] *= 0.82;
     }
     FXSystem.update();
   },
@@ -1848,7 +1866,7 @@ const Renderer = {
       if(!e.alive) continue;
       ctx.fillStyle='rgba(0,0,0,0.3)';
       ctx.beginPath(); ctx.ellipse(esx+TS/2,esy+TS-5,TS*0.28,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.enemy(ctx,esx,esy,TS,TS,e,{bob:es.bob,hurtAlpha:0});
+      TilePainter.enemy(ctx,esx,esy,TS,TS,e,{bob:es.bob,hurtAlpha:AnimSystem.evhurt[e.id]??0});
       const bw=TS-4, bx=esx+2, by=esy+TS-6;
       const ratio=clamp(e.hp/e.maxHp,0,1);
       ctx.fillStyle='#1a0000'; ctx.fillRect(bx,by,bw,3);
@@ -1866,7 +1884,7 @@ const Renderer = {
       const psx=ps.sx, psy=ps.sy;
       ctx.fillStyle='rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(psx+TS/2,psy+TS-5,TS*0.26,4,0,0,Math.PI*2); ctx.fill();
-      TilePainter.player(ctx,psx,psy,TS,TS,{bob:ps.bob,swingAngle:0,hurtAlpha:0});
+      TilePainter.player(ctx,psx,psy,TS,TS,{bob:ps.bob,swingAngle:AnimSystem.playerSwing*Math.PI*0.6,hurtAlpha:AnimSystem.playerHurt});
     }
 
     // ── Layer 7: Fog of War overlay ──────────────────────────
@@ -2250,6 +2268,7 @@ const Game = {
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
     CombatSystem.attack(t);
     FXSystem.spawn('hit',t.x,t.y,'#c8dcf0');
+    AnimSystem.playerSwing=1.0; AnimSystem.start();
     this.endTurn();
   },
   trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
@@ -2494,7 +2513,7 @@ const _origLevelUp=Player.levelUp.bind(Player);
 Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); flashScreen('gold'); };
 // Wire Player.takeDamage audio + hurt anim
 const _origTakeDamage=Player.takeDamage.bind(Player);
-Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); } return v; };
+Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); AnimSystem.playerHurt=1.0; AnimSystem.start(); } return v; };
 
 // ── Boot ──────────────────────────────────────────────────────
 Game.init();
