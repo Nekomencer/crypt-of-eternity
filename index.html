@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>CRYPTS OF ETERNITY — Roguelike</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
@@ -31,15 +31,18 @@
     font-family: var(--font-main); font-size: 10px;
     display: flex; flex-direction: column; align-items: stretch;
     height: 100vh; overflow: hidden; user-select: none;
+    margin: 0; touch-action: none;
+    -webkit-user-select: none;
   }
 
   /* TITLE */
   #title-screen {
-    position: fixed; inset: 0; background: var(--bg);
+    position: fixed; inset: 0; background: #0c0a16;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    z-index: 100; gap: 24px;
+    z-index: 100; gap: 18px;
   }
+  #title-screen.hidden { display: none; }
   #title-screen h1 {
     font-size: 22px; color: var(--gold);
     text-shadow: 0 0 20px #f5c84288;
@@ -47,13 +50,14 @@
     text-align: center; line-height: 1.6;
   }
   #title-screen p { color: var(--dim); font-size: 8px; line-height: 2; text-align: center; }
-  #start-btn {
+  #start-btn, #continue-btn {
     padding: 14px 28px; background: none;
     border: 2px solid var(--gold); color: var(--gold);
     font-family: var(--font-main); font-size: 10px;
     cursor: pointer; animation: blink 1.2s step-end infinite;
   }
-  #start-btn:hover { background: #f5c84222; }
+  #start-btn:hover, #continue-btn:hover { background: #f5c84222; }
+  #continue-btn { border-color: var(--green); color: var(--green); }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes glow  { from { text-shadow: 0 0 10px #f5c84266; } to { text-shadow: 0 0 30px #f5c842cc; } }
 
@@ -116,7 +120,7 @@
 
   /* MAP */
   #map-area { flex: 1; position: relative; background: #000; overflow: hidden; }
-  #map-canvas { position: absolute; top: 0; left: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #map-canvas { position: absolute; top: 0; left: 0; image-rendering: pixelated; image-rendering: crisp-edges; background: #0c0a16; }
   #minimap-canvas { position: absolute; bottom: 8px; right: 8px; image-rendering: pixelated; border: 1px solid #2a2a3a; opacity: 0.82; }
 
   /* RIGHT PANEL */
@@ -142,7 +146,18 @@
     width: 100%; background: var(--panel); border-top: 1px solid var(--border);
     padding: 5px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   }
-  #controls-hint { font-size: 8px; color: var(--dim); letter-spacing: 1px; line-height: 1.8; }
+  #controls-hint {
+    margin-top: auto;
+    padding: 8px 4px 6px;
+    border-top: 1px solid #2a2840;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 9px;
+    color: #5a5870;
+    line-height: 1.4;
+  }
+  #controls-hint span { white-space: nowrap; }
   #gold-display  { font-size: 9px; color: var(--gold); }
 
   /* OVERLAYS */
@@ -302,6 +317,161 @@
     transition:opacity 0.35s;
   }
   #battle-transition.fade-in { opacity:1; pointer-events:all; }
+
+  /* MOBILE LOG */
+  #mobile-log {
+    display: none;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 180px;
+    max-height: 80px;
+    overflow: hidden;
+    font-size: 10px;
+    color: #ccc;
+    pointer-events: none;
+    z-index: 10;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* D-PAD */
+  #dpad {
+    display: none;
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(3, 44px);
+    gap: 3px;
+    z-index: 50;
+    touch-action: none;
+  }
+  #dpad-up     { grid-column: 2; grid-row: 1; }
+  #dpad-left   { grid-column: 1; grid-row: 2; }
+  #dpad-center { grid-column: 2; grid-row: 2; background: transparent !important; border: none !important; }
+  #dpad-right  { grid-column: 3; grid-row: 2; }
+  #dpad-down   { grid-column: 2; grid-row: 3; }
+  .dpad-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    color: #ccc;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .dpad-btn:active { background: rgba(255,255,255,0.22); }
+
+  /* ACTION BUTTONS */
+  #action-btns {
+    display: none;
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    z-index: 50;
+    touch-action: none;
+  }
+  .action-btn {
+    background: rgba(90,88,112,0.55);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: #f0e8d0;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 14px;
+    min-width: 52px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .action-btn:active { background: rgba(150,140,200,0.55); }
+  #btn-attack {
+    background: rgba(180,60,60,0.55);
+    font-weight: bold;
+    padding: 10px 16px;
+  }
+
+  /* MOBILE RESPONSIVE */
+  * { touch-action: manipulation; }
+  #dpad, #action-btns { touch-action: none; }
+
+  @media (max-width: 700px) {
+    #dpad { display: grid; }
+    #action-btns { display: flex; }
+    #mobile-log { display: block; }
+
+    #main-area { flex-direction: column; }
+
+    #left-panel {
+      width: 100%;
+      max-height: 110px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      overflow: hidden;
+      padding: 4px 8px;
+      gap: 4px 12px;
+      font-size: 11px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    #left-panel .panel-section#vitals { flex: 1; }
+    #left-panel .panel-section#vitals .stat-bar-row { flex-direction: row; gap: 6px; }
+    #left-panel #skills-section,
+    #left-panel #equipment-section,
+    #left-panel #controls-hint { display: none; }
+
+    #map-area {
+      flex: 1;
+      position: relative;
+    }
+    #map-canvas {
+      image-rendering: pixelated;
+    }
+
+    #right-panel { display: none; }
+    #bottom-bar { display: none; }
+
+    #battle-menu {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      padding: 8px;
+    }
+    #battle-menu button, #battle-sub-menu button {
+      min-width: 80px;
+      min-height: 48px;
+      font-size: 13px;
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    #battle-enemy-canvas { width: 160px !important; height: 160px !important; }
+    #battle-player-canvas { width: 120px !important; height: 120px !important; }
+    #battle-enemy-area, #battle-player-area { gap: 4px; }
+
+    #inv-overlay .overlay-box,
+    #merchant-overlay .overlay-box {
+      position: fixed;
+      inset: 0;
+      max-width: 100%;
+      max-height: 100%;
+      width: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0;
+      font-size: 13px;
+    }
+    .inv-cell { min-height: 44px; }
+    .merchant-item { min-height: 44px; }
+  }
 </style>
 </head>
 <body>
@@ -310,7 +480,8 @@
   <h1>⚔ CRYPTS<br>OF ETERNITY</h1>
   <p>WASD/ARROWS · MOVE &nbsp;|&nbsp; SPACE · ATTACK<br>
      1/2/3 · SKILLS &nbsp;|&nbsp; I · INVENTORY &nbsp;|&nbsp; E · INTERACT</p>
-  <button id="start-btn">▶ ENTER THE CRYPT</button>
+  <button id="continue-btn" style="display:none">▶ CONTINUE RUN</button>
+  <button id="start-btn">▶ NEW GAME</button>
 </div>
 
 <div id="game-container">
@@ -320,7 +491,7 @@
   </div>
   <div id="main-area">
     <div id="left-panel">
-      <div class="panel-section">
+      <div class="panel-section" id="vitals">
         <div class="panel-title">VITALS</div>
         <div class="stat-bar-row">
           <div class="stat-label"><span>HP</span><span class="val" id="hp-label">20/20</span></div>
@@ -344,17 +515,24 @@
           <div class="stat-cell"><div class="lbl">SPD</div><div class="val">1</div></div>
         </div>
       </div>
-      <div class="panel-section">
+      <div class="panel-section" id="skills-section">
         <div class="panel-title">SKILLS</div>
         <div id="skill-slots"></div>
       </div>
-      <div class="panel-section">
+      <div class="panel-section" id="equipment-section">
         <div class="panel-title">EQUIPMENT</div>
         <div id="equip-slots"></div>
       </div>
+      <div id="controls-hint">
+        <span>WASD/↑↓←→ Move</span>
+        <span>SPC Attack</span>
+        <span>1/2/3 Skills</span>
+        <span>I Inv</span>
+        <span>E Talk</span>
+      </div>
     </div>
 
-    <div id="map-area"><canvas id="map-canvas"></canvas><canvas id="minimap-canvas"></canvas></div>
+    <div id="map-area"><canvas id="map-canvas"></canvas><canvas id="minimap-canvas"></canvas><div id="mobile-log"></div></div>
 
     <div id="right-panel">
       <div id="log-title">BATTLE LOG</div>
@@ -362,7 +540,7 @@
     </div>
   </div>
   <div id="bottom-bar">
-    <span id="controls-hint">WASD/↑↓←→ MOVE &nbsp;·&nbsp; SPACE ATK &nbsp;·&nbsp; 1/2/3 SKILL &nbsp;·&nbsp; Q POTION<br>I INVENTORY &nbsp;·&nbsp; E INTERACT/DESCEND</span>
+    <span>WASD/↑↓←→ MOVE &nbsp;·&nbsp; SPACE ATK &nbsp;·&nbsp; 1/2/3 SKILL &nbsp;·&nbsp; Q POTION<br>I INVENTORY &nbsp;·&nbsp; E INTERACT/DESCEND</span>
     <span id="gold-display">💰 0 GOLD</span>
   </div>
 </div>
@@ -433,12 +611,28 @@
     <button class="battle-btn" data-idx="0">ATTACK</button>
     <button class="battle-btn" data-idx="1">SKILLS</button>
     <button class="battle-btn" data-idx="2">ITEM</button>
-    <button class="battle-btn" data-idx="3">FLEE</button>
+    <button class="battle-btn" data-idx="3">FLEE (4MP)</button>
   </div>
   <div id="battle-sub-menu" class="hidden"></div>
 </div>
 
 <div id="battle-transition"></div>
+
+<div id="dpad" aria-label="Movement controls">
+  <button class="dpad-btn" id="dpad-up"    data-key="ArrowUp">▲</button>
+  <button class="dpad-btn" id="dpad-left"  data-key="ArrowLeft">◀</button>
+  <button class="dpad-btn" id="dpad-center"></button>
+  <button class="dpad-btn" id="dpad-right" data-key="ArrowRight">▶</button>
+  <button class="dpad-btn" id="dpad-down"  data-key="ArrowDown">▼</button>
+</div>
+
+<div id="action-btns">
+  <button class="action-btn" id="btn-skill1"   data-key="1">1</button>
+  <button class="action-btn" id="btn-skill2"   data-key="2">2</button>
+  <button class="action-btn" id="btn-skill3"   data-key="3">3</button>
+  <button class="action-btn" id="btn-interact" data-key="e">E</button>
+  <button class="action-btn" id="btn-attack"   data-key=" ">ATK</button>
+</div>
 
 <script>
 'use strict';
@@ -457,6 +651,14 @@ const INV_MAX = 20;
 const SKILL_MAX = 3;
 const FOG_RADIUS = 6; // tiles visible around player
 const MAX_FLOOR = 10;
+
+const RARITY_COLOR = {
+  common:   '#aaaaaa',
+  uncommon: '#55cc55',
+  rare:     '#5599ff',
+  epic:     '#cc66ff',
+  unique:   '#ff9900',
+};
 
 // Tile IDs
 const T = { WALL:0, FLOOR:1, STAIRS:3, EXIT:4 };
@@ -652,8 +854,24 @@ const Logger = {
     const a=document.getElementById('log-area');
     a.prepend(d);
     while(a.children.length>80) a.removeChild(a.lastChild);
+    this._mirrorMobile();
   },
-  clear(){ document.getElementById('log-area').innerHTML=''; },
+  addHTML(html,cls='') {
+    const d=document.createElement('div');
+    d.className='log-entry '+cls; d.innerHTML=html;
+    const a=document.getElementById('log-area');
+    a.prepend(d);
+    while(a.children.length>80) a.removeChild(a.lastChild);
+    this._mirrorMobile();
+  },
+  _mirrorMobile() {
+    const ml=document.getElementById('mobile-log');
+    if(!ml) return;
+    const a=document.getElementById('log-area');
+    const entries=Array.from(a.children).slice(0,4);
+    ml.innerHTML=entries.map(e=>e.outerHTML).join('');
+  },
+  clear(){ document.getElementById('log-area').innerHTML=''; const ml=document.getElementById('mobile-log'); if(ml) ml.innerHTML=''; },
 };
 
 // ============================================================
@@ -2004,11 +2222,14 @@ const EntityManager = {
     for(let i=0;i<numE;i++){
       const pos=place(); if(!pos) continue;
       const def=this._pick(floor);
-      // HP scales +10% per floor, ATK scales +8% per floor (was 15%/12%)
+      const fm=1+(floor-1)*0.18, gm=1+(floor-1)*0.15;
       this.enemies.push({...def,id:i,x:pos.x,y:pos.y,
-        hp:  Math.floor(def.hp  *(1+floor*0.10)),
-        maxHp:Math.floor(def.hp *(1+floor*0.10)),
-        atk: Math.floor(def.atk *(1+floor*0.08)),
+        hp:   Math.round(def.hp  *fm),
+        maxHp:Math.round(def.hp  *fm),
+        atk:  Math.round(def.atk *fm),
+        def:  Math.round(def.def *(1+(floor-1)*0.10)),
+        exp:  Math.round(def.exp *fm),
+        gold: [Math.round(def.gold[0]*gm), Math.round(def.gold[1]*gm)],
         alive:true});
     }
     for(let i=0;i<numC;i++){ const p=place(); if(p) this.chests.push({x:p.x,y:p.y,opened:false}); }
@@ -2197,7 +2418,7 @@ const CombatSystem = {
       Logger.add(`Inventory full — item lost: ${item.icon} ${item.name}`,'warn');
     else {
       Audio.play('loot');
-      Logger.add(`Dropped: ${item.icon} ${item.name} (${rarity})`,'loot');
+      Logger.addHTML(`Dropped: ${item.icon} <span style="color:${RARITY_COLOR[rarity]||'#aaa'}">${item.name}</span> <span style="color:#666">(${rarity})</span>`,'loot');
     }
   },
   _rarity(f){ const r=rng(1,100); if(f>=4&&r<=10)return'epic'; if(f>=2&&r<=30)return'rare'; return'common'; },
@@ -2220,7 +2441,7 @@ const CombatSystem = {
         const item={...pool[rng(0,pool.length-1)]};
         const rarity=this._rarity(GameState.floor);
         if(Player.addItem(this._scale(item,rarity,GameState.floor),rarity))
-          Logger.add(`Found: ${item.icon} ${item.name} (${rarity})!`,'loot');
+          Logger.addHTML(`Found: ${item.icon} <span style="color:${RARITY_COLOR[rarity]||'#aaa'}">${item.name}</span> <span style="color:#666">(${rarity})</span>!`,'loot');
       }
     }
   },
@@ -2536,11 +2757,12 @@ const BattleSystem = {
   _enemyHurt: 0,
   _playerHurt: 0,
   _playerSwing: 0,
+  _fleeCooldown: 0,
 
   engage(e) {
     this.enemy = e;
     this._busy = false; this._cursor = 0;
-    this._phase = 'menu'; this._logCb = null;
+    this._phase = 'menu'; this._logCb = null; this._fleeCooldown = 0;
     clearTimeout(this._logTimer);
     const tr = document.getElementById('battle-transition');
     tr.classList.add('fade-in');
@@ -2634,9 +2856,11 @@ const BattleSystem = {
     requestAnimationFrame(decay);
   },
 
-  _log(text, cb) {
+  _log(text, cb, color) {
     this._phase = 'log'; this._busy = true; this._logCb = cb || null;
-    document.getElementById('battle-log-text').textContent = text;
+    const el = document.getElementById('battle-log-text');
+    el.textContent = text;
+    el.style.color = color || '';
     clearTimeout(this._logTimer);
     this._logTimer = setTimeout(() => this._advanceLog(), 900);
   },
@@ -2669,6 +2893,7 @@ const BattleSystem = {
   },
 
   _enemyTurn() {
+    if (this._fleeCooldown > 0) this._fleeCooldown--;
     const e = this.enemy;
     const dmg = Player.takeDamage(e.atk);
     Camera.shake(4); flashScreen();
@@ -2717,6 +2942,14 @@ const BattleSystem = {
   },
 
   _flee() {
+    const FLEE_MP_COST = 4;
+    if (this._fleeCooldown > 0) {
+      this._log(`Can't flee yet — wait ${this._fleeCooldown} turn(s).`, null, '#ff6666'); return;
+    }
+    if (Player.mp < FLEE_MP_COST) {
+      this._log(`Not enough MP to flee! (costs ${FLEE_MP_COST} MP)`, null, '#ff6666'); return;
+    }
+    Player.mp -= FLEE_MP_COST; UIManager.updateVitals();
     this._busy = true; this._setMenuDisabled(true);
     const eFloor = ENEMY_DEFS[this.enemy.type]?.floor || 1;
     const chance = clamp(0.55 - (GameState.floor - eFloor) * 0.08, 0.15, 0.80);
@@ -2732,6 +2965,7 @@ const BattleSystem = {
         });
       });
     } else {
+      this._fleeCooldown = 2;
       this._log("Couldn't escape!", () => this._enemyTurn());
     }
   },
@@ -2882,6 +3116,24 @@ const Renderer = {
     this.canvas.width=w; this.canvas.height=h;
     Camera.vw=w; Camera.vh=h;
     TilePainter.clearCache();
+    this._scaleCanvas();
+  },
+
+  _scaleCanvas(){
+    const isMobile=window.innerWidth<=700;
+    if(isMobile){
+      const logicalW=COLS*TS, logicalH=ROWS*TS;
+      const availW=window.innerWidth;
+      const availH=window.innerHeight-120-80;
+      const scale=Math.min(availW/logicalW, availH/logicalH);
+      this.canvas.style.width =Math.floor(logicalW*scale)+'px';
+      this.canvas.style.height=Math.floor(logicalH*scale)+'px';
+      this.canvas.style.imageRendering='pixelated';
+    } else {
+      this.canvas.style.width='';
+      this.canvas.style.height='';
+      this.canvas.style.imageRendering='';
+    }
   },
   _resizeTimer:null,
 
@@ -3090,7 +3342,7 @@ const UIManager = {
       const eq=slot?.item||null;
       const d=document.createElement('div'); d.className='equip-slot';
       d.innerHTML=`<div class="equip-icon">${eq?eq.icon:s.icon}</div><div class="equip-info">
-        <div class="equip-lbl">${s.label}</div><div class="equip-name">${eq?eq.name:'— none —'}</div>
+        <div class="equip-lbl">${s.label}</div><div class="equip-name" style="${slot?`color:${RARITY_COLOR[slot.rarity]||'#fff'}`:'color:#555'}">${eq?eq.name:'— none —'}</div>
         <div class="equip-stat">${eq?(eq.atk?`+${eq.atk} ATK`:`+${eq.def} DEF${eq.hp?` +${eq.hp} HP`:''}`):''}
         </div></div>`;
       c.appendChild(d);
@@ -3156,8 +3408,8 @@ const UIManager = {
     if(item.type==='potion'||item.type==='book')  acts+=`<button class="item-btn" onclick="UIManager.doUse(${idx})">USE</button>`;
     acts+=`<button class="item-btn danger" id="sell-btn-${idx}" onclick="UIManager.confirmSell(${idx},${sell})">SELL (${sell}g)</button>`;
     const det=document.getElementById('item-detail'); det.classList.add('active');
-    det.innerHTML=`<div class="item-name">${item.icon} ${item.name}</div>
-      <div class="item-type">${item.type.toUpperCase()} · ${entry.rarity.toUpperCase()}</div>
+    det.innerHTML=`<div class="item-name" style="color:${RARITY_COLOR[entry.rarity]||'#fff'}">${item.icon} ${item.name}</div>
+      <div class="item-type" style="color:${RARITY_COLOR[entry.rarity]||'#888'}">${item.type.toUpperCase()} · ${entry.rarity.toUpperCase()}</div>
       <div class="item-stat">${stats.join('  ')}</div>
       <div class="item-desc">${item.desc||''}</div>
       <div class="item-actions">${acts}</div>`;
@@ -3220,7 +3472,7 @@ const UIManager = {
       if(item.mp) stats.push(`MP+${item.mp}`);
       if(item.type==='book') stats.push(SKILL_DEFS[item.skill]?.desc||'Learn skill');
       div.innerHTML=`<div class="merchant-icon">${item.icon}</div>
-        <div class="merchant-info"><div class="merchant-name">${item.name}</div>
+        <div class="merchant-info"><div class="merchant-name" style="color:${RARITY_COLOR[e.rarity]||'#aaa'}">${item.name}</div>
         <div class="merchant-stat">${stats.join(' · ')}</div></div>
         <div class="merchant-price">${e.price}g</div>`;
       if(can) div.onclick=()=>MerchantSystem.buy(i);
@@ -3229,6 +3481,7 @@ const UIManager = {
   },
   showGameOver(){
     GameState.state='GAME_OVER';
+    SaveSystem.clear();
     const s=GameState.stats;
     document.getElementById('death-stats').innerHTML=
       `<div>Floor reached: ${GameState.floor}</div>`+
@@ -3325,6 +3578,7 @@ const Game = {
     document.getElementById('game-over-screen').classList.remove('active');
     UIManager.closeAllOverlays();
     Player.reset(); Logger.clear();
+    SaveSystem.clear();
     GameState.stats = { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
     Logger.add('Welcome to the Crypts of Eternity!','info');
     Logger.add('Explore the dark. Find stairs ▼ to descend.','dim');
@@ -3332,8 +3586,8 @@ const Game = {
     requestAnimationFrame(()=>{ Renderer.resize(); self.nextFloor(); });
   },
 
-  nextFloor(){
-    const newFloor=GameState.floor+1;
+  nextFloor(forceFloor){
+    const newFloor=forceFloor!==undefined?forceFloor:GameState.floor+1;
     if(GameState.floor>0) GameState.stats.floorsCleared++;
     // POLISH-4: black-cut flash then floor announce
     const canvas=Renderer.canvas;
@@ -3346,6 +3600,7 @@ const Game = {
     Player.x=rooms[0].cx; Player.y=rooms[0].cy;
     GameState.onStairs=false;
     EntityManager.spawnFloor(newFloor,rooms);
+    SaveSystem.save();
     // On floor MAX_FLOOR, replace stairs with exit portal
     if(newFloor===MAX_FLOOR){
       const last=rooms[rooms.length-1];
@@ -3762,8 +4017,94 @@ Player.levelUp=function(){ _origLevelUp(); Audio.play('levelup'); flashScreen('g
 const _origTakeDamage=Player.takeDamage.bind(Player);
 Player.takeDamage=function(d){ const v=_origTakeDamage(d); if(v>0){ Audio.play('hit'); AnimSystem.playerHurt=1.0; AnimSystem.start(); } return v; };
 
+// ── Audio unlock (required on mobile before Web Audio plays) ──
+const _unlockAudio = () => {
+  const ctx = Audio._ctx();
+  if (ctx.state === 'suspended') ctx.resume();
+  document.removeEventListener('touchstart', _unlockAudio);
+  document.removeEventListener('mousedown',  _unlockAudio);
+};
+document.addEventListener('touchstart', _unlockAudio, { once: true });
+document.addEventListener('mousedown',  _unlockAudio, { once: true });
+
+// ── D-pad + action buttons touch wiring ───────────────────────
+(function wireMobileControls() {
+  const fire = key => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  };
+  document.querySelectorAll('.dpad-btn[data-key], .action-btn[data-key]').forEach(btn => {
+    btn.addEventListener('touchstart', e => { e.preventDefault(); fire(btn.dataset.key); }, { passive: false });
+    btn.addEventListener('mousedown',  e => { e.preventDefault(); fire(btn.dataset.key); });
+  });
+})();
+
+// ── SaveSystem ────────────────────────────────────────────────
+const SaveSystem = {
+  KEY: 'coe_save_v1',
+  save() {
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify({
+        floor: GameState.floor,
+        stats: GameState.stats,
+        player: {
+          hp: Player.hp, maxHp: Player.maxHp, mp: Player.mp, maxMp: Player.maxMp,
+          xp: Player.xp, level: Player.level, gold: Player.gold,
+          atk: Player.atk, def: Player.def, spd: Player.spd,
+          skills: [...Player.skills],
+          knownSkills: [...Player.knownSkills],
+          equipment: JSON.parse(JSON.stringify(Player.equipment)),
+          inventory: JSON.parse(JSON.stringify(Player.inventory)),
+        }
+      }));
+    } catch(e) { /* storage full or private mode */ }
+  },
+  load() {
+    try { const r=localStorage.getItem(this.KEY); return r?JSON.parse(r):null; } catch(e){ return null; }
+  },
+  clear() { try { localStorage.removeItem(this.KEY); } catch(e){} }
+};
+
+// ── Prevent pinch-zoom and double-tap zoom ────────────────────
+document.addEventListener('touchstart', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+document.addEventListener('touchend', e => {
+  e.preventDefault();
+}, { passive: false });
+
 // ── Boot ──────────────────────────────────────────────────────
 Game.init();
+
+// ── Continue run button ───────────────────────────────────────
+(function checkSave() {
+  const save = SaveSystem.load();
+  if (!save) return;
+  const btn = document.getElementById('continue-btn');
+  if (!btn) return;
+  btn.style.display = 'inline-block';
+  btn.onclick = () => {
+    // Restore game state from save
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('game-container').classList.add('active');
+    document.getElementById('game-over-screen').classList.remove('active');
+    UIManager.closeAllOverlays();
+    Player.reset();
+    const p = save.player;
+    Object.assign(Player, {
+      hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp,
+      xp: p.xp, level: p.level, gold: p.gold,
+      atk: p.atk, def: p.def, spd: p.spd,
+      skills: p.skills,
+      knownSkills: p.knownSkills,
+      equipment: p.equipment,
+      inventory: p.inventory,
+    });
+    GameState.stats = save.stats || { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
+    Logger.clear();
+    Logger.add(`Welcome back! Resuming from floor ${save.floor}.`, 'info');
+    requestAnimationFrame(() => { Renderer.resize(); Game.nextFloor(save.floor); });
+  };
+})();
 </script>
 </body>
 </html>
