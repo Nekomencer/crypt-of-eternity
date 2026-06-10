@@ -202,7 +202,7 @@
   #victory-screen { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:none; align-items:center; justify-content:center; z-index:200; flex-direction:column; gap:20px; }
   #victory-screen.active { display:flex; }
   #victory-screen h2 { font-size:20px; color:var(--gold); text-shadow:0 0 20px #f5c84288; animation: glow 2s ease-in-out infinite alternate; }
-  #victory-screen .stats { font-size:8px; color:var(--dim); line-height:2.5; text-align:center; }
+  #victory-screen .stats { font-size:8px; color:#f0c040; line-height:2.5; text-align:center; }
   #victory-screen button { padding:12px 24px; border:2px solid var(--gold); color:var(--gold); background:none; font-family:var(--font-main); font-size:9px; cursor:pointer; }
   #victory-screen button:hover { background:#2a2a1a; }
 
@@ -497,6 +497,7 @@ const PAL = {
   skeleton:     '#c8c8b0',
   troll:        '#7040a0',
   demon:        '#c02020',
+  lich:         '#8040c0',
 
   hpHigh:       '#44cc44',
   hpMid:        '#ccaa00',
@@ -541,6 +542,17 @@ const TorchSystem = {
         }
       }
     }
+    // Corridor torches — floor tiles not inside any room, spaced ~5 tiles apart
+    for (let ty = 1; ty < ROWS - 1; ty++) {
+      for (let tx = 1; tx < COLS - 1; tx++) {
+        if (MapGen.tiles[ty][tx] !== T.FLOOR) continue;
+        const inRoom = MapGen.rooms.some(r => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h);
+        if (inRoom) continue;
+        if ((tx + ty) % 5 === 0 && Math.random() < 0.35) {
+          this.torches.push({ x: tx, y: ty, phase: Math.random() * Math.PI * 2 });
+        }
+      }
+    }
   },
 
   draw(ctx) {
@@ -557,11 +569,11 @@ const TorchSystem = {
       ctx.fillStyle = PAL.torchYellow; ctx.fillRect(cx - 1, fy - 2, 2, 3);
       // Radial glow centred on the floor below the torch
       const gx = cx, gy = sy + TS;
-      const r = TS * 2.5 * flicker;
+      const r = 96 * flicker;
       const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
-      g.addColorStop(0, 'rgba(255,160,30,0.20)');
-      g.addColorStop(0.5, 'rgba(255,120,10,0.08)');
-      g.addColorStop(1, 'transparent');
+      g.addColorStop(0, `rgba(255,160,60,${(0.18+flicker*0.10).toFixed(2)})`);
+      g.addColorStop(0.4, `rgba(255,120,30,${(0.08+flicker*0.05).toFixed(2)})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.save();
       ctx.globalAlpha = flicker;
       ctx.fillStyle = g;
@@ -584,12 +596,14 @@ const TorchSystem = {
 
 // ── SKILL DEFINITIONS ─────────────────────────────────────────
 const SKILL_DEFS = {
+  slash:         {id:'slash',         name:'Slash',       icon:'⚔', manaCost:2, range:1,aoe:false,dmgMul:1.3,desc:'A quick sword strike. 130% ATK.'},
   fireball:      {id:'fireball',      name:'Fireball',    icon:'🔥',manaCost:15,range:4,aoe:false,dmgMul:2.2,desc:'Hurl fireball at enemy within 4 tiles.'},
   icebolt:       {id:'icebolt',       name:'Ice Bolt',    icon:'❄', manaCost:12,range:3,aoe:false,dmgMul:1.8,desc:'Freeze an enemy, moderate damage.'},
   thunderstrike: {id:'thunderstrike', name:'Thunder',     icon:'⚡',manaCost:20,range:2,aoe:true, dmgMul:1.5,desc:'Lightning hits all enemies in range.'},
   shadowstep:    {id:'shadowstep',    name:'Shadow Step', icon:'🌑',manaCost:18,range:5,aoe:false,dmgMul:0,  desc:'Teleport to a random floor tile.'},
   vampiricblow:  {id:'vampiricblow',  name:'Vampiric',    icon:'🩸',manaCost:22,range:1,aoe:false,dmgMul:1.6,desc:'Strike enemy, heal 50% of damage.'},
   spiritwave:    {id:'spiritwave',    name:'Spirit Wave', icon:'🌊',manaCost:25,range:3,aoe:true, dmgMul:2.0,desc:'Push spirit energy forward.'},
+  soul_drain:    {id:'soul_drain',    name:'Soul Drain',  icon:'💀',manaCost:8, range:1,aoe:false,dmgMul:1.4,lifesteal:0.4,desc:'Drain 40% of damage dealt as HP.'},
 };
 
 // ── ITEMS ─────────────────────────────────────────────────────
@@ -619,7 +633,8 @@ const ENEMY_DEFS = {
   orc:     {type:'orc',     name:'Orc',     col:PAL.orc,     hp:16, atk:4, def:1,exp:18,gold:[5,10], floor:2},
   skeleton:{type:'skeleton',name:'Skeleton',col:PAL.skeleton,hp:12, atk:3, def:1,exp:14,gold:[3,8],  floor:2},
   troll:   {type:'troll',   name:'Troll',   col:PAL.troll,   hp:30, atk:6, def:2,exp:30,gold:[10,18],floor:3},
-  demon:   {type:'demon',   name:'Demon',   col:PAL.demon,   hp:50, atk:10,def:3,exp:50,gold:[18,30],floor:5},
+  demon:   {type:'demon',   name:'Demon',   col:PAL.demon,   hp:50, atk:10,def:3, exp:50, gold:[18,30], floor:5},
+  lich:    {type:'lich',   name:'The Lich',col:PAL.lich,    hp:280,atk:26,def:10,exp:400,gold:[150,250],floor:10,isBoss:true},
 };
 
 // ── UTILITIES ─────────────────────────────────────────────────
@@ -656,7 +671,7 @@ const Player = {
 
   heal(a)       { this.hp=clamp(this.hp+a,0,this.totalMaxHp); },
   restoreMp(a)  { this.mp=clamp(this.mp+a,0,this.maxMp); },
-  takeDamage(d) { const v=Math.max(1,d-this.totalDef); this.hp-=v; return v; },
+  takeDamage(d) { const v=Math.max(1,d-this.totalDef); this.hp-=v; GameState.stats.damageTaken+=v; return v; },
   gainExp(a)    { this.exp+=a; if(this.exp>=this.expNext) this.levelUp(); },
   levelUp() {
     this.exp-=this.expNext; this.level++;
@@ -665,7 +680,7 @@ const Player = {
     this.hp=this.totalMaxHp; this.mp=this.maxMp;
     Logger.add(`⬆ Level Up! Now level ${this.level}!`,'level'); flashScreen();
   },
-  gainGold(a)   { this.gold+=a; Logger.add(`+${a} gold`,'gold'); },
+  gainGold(a)   { this.gold+=a; Logger.add(`+${a} gold`,'gold'); GameState.stats.goldCollected+=a; },
   spendGold(a)  { this.gold-=a; },
   addItem(item,rarity){ if(this.inventory.length>=INV_MAX) return false; this.inventory.push({item,rarity}); return true; },
   removeItem(i) { this.inventory.splice(i,1); },
@@ -705,7 +720,8 @@ const Player = {
     Object.assign(this,{
       x:2,y:2,hp:30,maxHp:30,mp:30,maxMp:30,atk:5,def:0,
       level:1,exp:0,expNext:100,gold:0,inventory:[],
-      equipment:{weapon:null,armor:null},skills:[null,null,null],knownSkills:[]
+      equipment:{weapon:{item:{name:'Worn Sword',type:'weapon',icon:'🗡',atk:2,baseVal:20},rarity:'common'},armor:null},
+      skills:['slash',null,null],knownSkills:['slash']
     });
   }
 };
@@ -716,6 +732,7 @@ const Player = {
 const MapGen = {
   tiles:[],   // [row][col] -> T.*
   rooms:[],   // [{x,y,w,h,cx,cy}]
+  decor:[],   // [row][col] -> 0=none, 1-255=seed
 
   // ── Public API ────────────────────────────────────────────
   generate(floor) {
@@ -723,15 +740,27 @@ const MapGen = {
     for(let attempt=0; attempt<15; attempt++) {
       this.tiles = Array.from({length:ROWS}, ()=>new Uint8Array(COLS));
       this.rooms = [];
-      this._bsp(1,1,COLS-2,ROWS-2, 5);
+      this._bsp(1,1,COLS-2,ROWS-2, 6);
       this._connectAllRooms();   // belt-and-suspenders: chain-link every room
       this._bfsRepair();         // BFS flood from seed; carve tunnels to any isolated floor
 
-      if(this.rooms.length >= 4) break; // enough rooms — done
+      if(this.rooms.length >= 6) break; // enough rooms — done
     }
     // Place stairs at last room centre (away from player spawn)
     const last=this.rooms[this.rooms.length-1];
     this.tiles[last.cy][last.cx] = T.STAIRS;
+    // Generate floor decorations (deterministic — same seed = same decor)
+    this.decor = Array.from({length:ROWS}, () => new Uint8Array(COLS));
+    this.rooms.forEach((room, ri) => {
+      for(let ry2=room.y; ry2<room.y+room.h; ry2++){
+        for(let rx2=room.x; rx2<room.x+room.w; rx2++){
+          if(this.tiles[ry2][rx2]===T.FLOOR){
+            const sel=(ri*31+rx2*7+ry2*13)%10;
+            if(sel<2) this.decor[ry2][rx2]=((ri*31+rx2*7+ry2*13)%255)+1;
+          }
+        }
+      }
+    });
     return { tiles:this.tiles, rooms:this.rooms };
   },
 
@@ -739,7 +768,7 @@ const MapGen = {
   // Recursively splits the map into leaf partitions, carves a room in
   // each leaf, then connects sibling leaves with L-shaped tunnels.
   _bsp(x,y,w,h,depth) {
-    if(depth===0 || w<9 || h<8) {
+    if(depth===0 || w<7 || h<6) {
       // Leaf — carve room
       const rw=rng(4, Math.min(w-2,11));
       const rh=rng(3, Math.min(h-2, 9));
@@ -1080,6 +1109,28 @@ const TilePainter = {
 
   clearCache(){ this._cache={}; },
 
+  // ── FLOOR DECORATION ─────────────────────────────────────
+  floorDecor(ctx, sx, sy, seed) {
+    const type = seed % 3;
+    if (type === 0) {
+      ctx.strokeStyle = '#2a2a32'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx + TS*0.28, sy + TS*0.25);
+      ctx.lineTo(sx + TS*0.55, sy + TS*0.55);
+      ctx.lineTo(sx + TS*0.70, sy + TS*0.72);
+      ctx.stroke();
+    } else if (type === 1) {
+      ctx.fillStyle = '#3a3a42';
+      ctx.fillRect(sx + (seed*7%20)+3,  sy + (seed*13%18)+4,  2, 1);
+      ctx.fillRect(sx + (seed*11%22)+5, sy + (seed*17%20)+8,  2, 1);
+      ctx.fillRect(sx + (seed*19%18)+8, sy + (seed*23%16)+12, 2, 1);
+    } else {
+      ctx.fillStyle = '#8a8070';
+      ctx.fillRect(sx + Math.floor(TS/2) - 1, sy + Math.floor(TS/2), 3, 1);
+      ctx.fillRect(sx + Math.floor(TS/2),     sy + Math.floor(TS/2) - 1, 1, 3);
+    }
+  },
+
   // ── FLOOR ─────────────────────────────────────────────────
   floor(ctx,sx,sy,W,H,alt){
     const t=this._cached(`floor_${W}_${H}_${alt}`,W,H,(c,w,h)=>{
@@ -1265,6 +1316,10 @@ const TilePainter = {
         ctx.fillRect(cx-hSg/2,by-H*0.50,hSg,hSg);
         ctx.fillRect(cx-hSg/2-6,by-H*0.42,6,10);
         ctx.fillRect(cx+hSg/2,by-H*0.42,6,10);
+        // Ear nubs silhouette
+        ctx.fillStyle='#3a7a3a';
+        ctx.fillRect(cx-hSg*0.26-1,by-H*0.55,1,2);
+        ctx.fillRect(cx+hSg*0.12,by-H*0.55,1,2);
         ctx.fillStyle='#ddcc00';
         ctx.fillRect(cx-hSg*0.28,by-H*0.36,Math.floor(hSg*0.20),Math.floor(hSg*0.16));
         ctx.fillRect(cx+hSg*0.08,by-H*0.36,Math.floor(hSg*0.20),Math.floor(hSg*0.16));
@@ -1275,7 +1330,7 @@ const TilePainter = {
       }
       case 'orc': {
         ctx.fillStyle=PAL.orc;
-        ctx.fillRect(cx-W*0.26,by-H*0.22,W*0.52,H*0.36);
+        ctx.fillRect(cx-W*0.27,by-H*0.22,W*0.54,H*0.36);
         const hSo=Math.floor(W*0.38);
         ctx.fillRect(cx-hSo/2,by-H*0.56,hSo,hSo);
         ctx.fillStyle='#f0e0a0';
@@ -1290,7 +1345,7 @@ const TilePainter = {
         break;
       }
       case 'skeleton': {
-        ctx.fillStyle=PAL.skeleton;
+        ctx.fillStyle='#d8d8c0';
         ctx.fillRect(cx-W*0.16,by-H*0.18,W*0.32,H*0.28);
         ctx.strokeStyle='#888888'; ctx.lineWidth=1;
         for(let i=0;i<3;i++){
@@ -1312,8 +1367,8 @@ const TilePainter = {
         break;
       }
       case 'troll': {
-        ctx.fillStyle=PAL.troll;
-        ctx.fillRect(cx-W*0.32,by-H*0.28,W*0.64,H*0.46);
+        ctx.fillStyle='#2d5a2d';
+        ctx.fillRect(cx-W*0.32,by-H*0.28,W*0.64,H*0.48);
         const hSt=Math.floor(W*0.42);
         ctx.fillRect(cx-hSt/2,by-H*0.66,hSt,hSt);
         ctx.fillStyle='#ff3300';
@@ -1349,6 +1404,22 @@ const TilePainter = {
         ctx.lineTo(cx+W*0.55,by-H*0.50);
         ctx.lineTo(cx+W*0.18,by+H*0.16);
         ctx.fill();
+        // Horn silhouette
+        ctx.fillStyle='#cc2222';
+        ctx.fillRect(cx,by-H*0.64,1,2);
+        break;
+      }
+      case 'lich': {
+        ctx.fillStyle='#2a1040';
+        ctx.fillRect(cx-W*0.18,by-H*0.20,W*0.36,H*0.32);
+        const hSl=Math.floor(W*0.30);
+        ctx.fillStyle='#e8e0c0';
+        ctx.fillRect(cx-hSl/2,by-H*0.52,hSl,hSl);
+        ctx.fillStyle='#101010';
+        ctx.fillRect(cx-hSl*0.25,by-H*0.38,Math.floor(hSl*0.24),Math.floor(hSl*0.20));
+        ctx.fillRect(cx+hSl*0.01,by-H*0.38,Math.floor(hSl*0.24),Math.floor(hSl*0.20));
+        ctx.fillStyle='#cc88ff';
+        ctx.fillRect(cx-1,by-H*0.62,2,2);
         break;
       }
     }
@@ -1415,6 +1486,13 @@ const TilePainter = {
     ctx.fillRect(cx + hS * 0.10, baseY - H * 0.38, Math.floor(hS * 0.18), Math.floor(hS * 0.18));
     ctx.fillStyle = PAL.playerHair;
     ctx.fillRect(cx - hS / 2, baseY - H * 0.52, hS, Math.floor(hS * 0.28));
+
+    // Shield silhouette (left)
+    ctx.fillStyle = '#6688bb';
+    ctx.fillRect(cx - bW / 2 - 4, baseY - H * 0.08, 2, 3);
+    // Sword silhouette (right)
+    ctx.fillStyle = '#c8c8c8';
+    ctx.fillRect(cx + bW / 2 + 2, baseY - H * 0.04, 3, 1);
 
     // Hurt overlay
     if(animState && animState.hurtAlpha > 0){
@@ -1828,6 +1906,66 @@ const TilePainter = {
         ctx.beginPath(); ctx.ellipse(W*(0.32+f*0.18),H*0.92,W*0.07*fl,H*0.04,0,0,Math.PI*2); ctx.fill();
       }
       ctx.restore();
+    } else if (type === 'lich') {
+      // Aura
+      const la = ctx.createRadialGradient(W*0.50,H*0.50,H*0.10,W*0.50,H*0.50,W*0.60);
+      la.addColorStop(0,'rgba(80,0,120,0.15)'); la.addColorStop(1,'transparent');
+      ctx.fillStyle=la; ctx.fillRect(0,0,W,H);
+      // Staff
+      ctx.fillStyle='#4a3060';
+      ctx.fillRect(Math.floor(W*0.76),Math.floor(H*0.14),Math.floor(W*0.04),Math.floor(H*0.72));
+      const ox=Math.floor(W*0.78), oy=Math.floor(H*0.13);
+      const og=ctx.createRadialGradient(ox,oy,0,ox,oy,18);
+      og.addColorStop(0,'#cc88ff'); og.addColorStop(1,'#330066');
+      ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,18,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#aa44cc'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(ox,oy,18,0,Math.PI*2); ctx.stroke();
+      // Robe trapezoid
+      ctx.fillStyle='#2a1040';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.40),Math.floor(H*0.29));
+      ctx.lineTo(Math.floor(W*0.60),Math.floor(H*0.29));
+      ctx.lineTo(Math.floor(W*0.70),Math.floor(H*0.87));
+      ctx.lineTo(Math.floor(W*0.30),Math.floor(H*0.87));
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='rgba(180,100,255,0.10)';
+      ctx.fillRect(Math.floor(W*0.42),Math.floor(H*0.29),Math.floor(W*0.06),Math.floor(H*0.42));
+      // Hands/claws
+      ctx.fillStyle='#c8c0a0';
+      ctx.fillRect(Math.floor(W*0.20),Math.floor(H*0.72),Math.floor(W*0.13),Math.floor(H*0.04));
+      for(let f=0;f<3;f++) ctx.fillRect(Math.floor(W*(0.20+f*0.042)),Math.floor(H*0.75),Math.floor(W*0.026),Math.floor(H*0.055));
+      ctx.fillRect(Math.floor(W*0.67),Math.floor(H*0.72),Math.floor(W*0.13),Math.floor(H*0.04));
+      for(let f=0;f<3;f++) ctx.fillRect(Math.floor(W*(0.67+f*0.042)),Math.floor(H*0.75),Math.floor(W*0.026),Math.floor(H*0.055));
+      // Hood
+      ctx.fillStyle='#3a1560';
+      ctx.beginPath(); ctx.ellipse(Math.floor(W*0.50),Math.floor(H*0.17),Math.floor(W*0.22),Math.floor(H*0.12),0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#180a30';
+      ctx.beginPath(); ctx.ellipse(Math.floor(W*0.50),Math.floor(H*0.17),Math.floor(W*0.15),Math.floor(H*0.09),0,0,Math.PI*2); ctx.fill();
+      // Skull
+      const hxl=Math.floor(W*0.34), hyl=Math.floor(H*0.10);
+      const hwl=Math.floor(W*0.32), hhl=Math.floor(H*0.22);
+      ctx.fillStyle='#e8e0c0';
+      ctx.beginPath(); ctx.ellipse(hxl+hwl/2,hyl+hhl*0.35,hwl/2,hhl*0.45,0,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(hxl+Math.floor(hwl*0.10),hyl+Math.floor(hhl*0.60),Math.floor(hwl*0.80),Math.floor(hhl*0.40));
+      ctx.fillStyle='#101010';
+      ctx.beginPath(); ctx.ellipse(hxl+Math.floor(hwl*0.28),hyl+Math.floor(hhl*0.40),Math.floor(hwl*0.13),Math.floor(hhl*0.14),0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hxl+Math.floor(hwl*0.72),hyl+Math.floor(hhl*0.40),Math.floor(hwl*0.13),Math.floor(hhl*0.14),0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(hxl+Math.floor(hwl*0.50),hyl+Math.floor(hhl*0.54));
+      ctx.lineTo(hxl+Math.floor(hwl*0.43),hyl+Math.floor(hhl*0.62));
+      ctx.lineTo(hxl+Math.floor(hwl*0.50),hyl+Math.floor(hhl*0.68));
+      ctx.lineTo(hxl+Math.floor(hwl*0.57),hyl+Math.floor(hhl*0.62));
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#e8e0c0';
+      for(let tt=0;tt<4;tt++) ctx.fillRect(hxl+Math.floor(hwl*(0.14+tt*0.19)),hyl+Math.floor(hhl*0.76),Math.floor(hwl*0.12),Math.floor(hhl*0.11));
+      ctx.fillStyle='#101010';
+      for(let tt=0;tt<3;tt++) ctx.fillRect(hxl+Math.floor(hwl*(0.27+tt*0.19)),hyl+Math.floor(hhl*0.76),Math.floor(hwl*0.07),Math.floor(hhl*0.11));
+      ctx.strokeStyle='#706860'; ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(hxl+Math.floor(hwl*0.38),hyl+Math.floor(hhl*0.03));
+      ctx.lineTo(hxl+Math.floor(hwl*0.30),hyl+Math.floor(hhl*0.22));
+      ctx.lineTo(hxl+Math.floor(hwl*0.40),hyl+Math.floor(hhl*0.40));
+      ctx.stroke();
     }
 
     // Hurt flash
@@ -1875,6 +2013,16 @@ const EntityManager = {
     }
     for(let i=0;i<numC;i++){ const p=place(); if(p) this.chests.push({x:p.x,y:p.y,opened:false}); }
     if(hasMerchant){ const p=place(); if(p) this.merchant={x:p.x,y:p.y}; }
+
+    // Boss spawn on floor 10
+    if(floor===MAX_FLOOR){
+      const bossRoom=rooms[Math.floor(rooms.length*0.6)]||rooms[1]||rooms[0];
+      const bx=bossRoom.cx, by=bossRoom.cy;
+      const existIdx=this.enemies.findIndex(e=>e.x===bx&&e.y===by);
+      if(existIdx>=0) this.enemies.splice(existIdx,1);
+      const ld={...ENEMY_DEFS.lich};
+      this.enemies.push({...ld,id:this.enemies.length,x:bx,y:by,alive:true,maxHp:ld.hp});
+    }
 
     // Guarantee a health potion in the player's starting room on floor 1
     if(floor===1){
@@ -1947,10 +2095,14 @@ const CombatSystem = {
     const dmg=Math.max(1,Player.totalAtk-enemy.def+rng(-2,2));
     enemy.hp-=dmg; Logger.add(`You hit ${enemy.name} for ${dmg}`,'');
     Floaters.add(enemy.x,enemy.y,dmg,'#e63946');
+    FXSystem.spawn('hit',enemy.x,enemy.y,'#ff4444');
     Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(enemy.id);
+    AnimSystem.playerSwing = 1.0;
+    GameState.stats.damageDealt += dmg;
     if(enemy.hp<=0){
       enemy.alive=false; enemy.deathFlash=8;
       Audio.play('death');
+      GameState.stats.enemiesKilled++;
       Player.gainExp(enemy.exp); Player.gainGold(rng(...enemy.gold));
       Logger.add(`${enemy.name} defeated!`,'loot');
       this._drop(enemy);
@@ -1974,22 +2126,25 @@ const CombatSystem = {
         Player.mp+=def.manaCost; // refund
         Logger.add('Shadow Step fizzled — no clear destination!','warn'); return false;
       }
-      Player.x=p.x; Player.y=p.y;
+      if(GameState.state!=='BATTLE'){ Player.x=p.x; Player.y=p.y; }
       FXSystem.spawn('puff',oldX,oldY,'#330044');
       Logger.add('Shadow Step! Teleported.','skill'); return true;
     }
 
+    const candidates = GameState.state==='BATTLE'
+      ? (BattleSystem.enemy&&BattleSystem.enemy.alive ? [BattleSystem.enemy] : [])
+      : EntityManager.enemies.filter(e=>e.alive&&dist(e,Player)<=def.range);
     let hits=0;
-    const candidates=EntityManager.enemies.filter(e=>e.alive&&dist(e,Player)<=def.range);
     if(def.aoe){
       for(const e of candidates){
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; Logger.add(`${def.name} hits ${e.name} for ${dmg}!`,'skill');
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
         AnimSystem.hurtEnemy(e.id);
+        GameState.stats.damageDealt+=dmg;
         if(sid==='thunderstrike') FXSystem.spawn('lightning',e.x,e.y,'#ffee44');
         else if(sid==='spiritwave') FXSystem.spawn('burst',e.x,e.y,'#44aaff');
-        if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
+        if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
       }
       if(!hits) Logger.add(`${def.name}: No targets in range.`,'warn');
@@ -2000,16 +2155,24 @@ const CombatSystem = {
       t.hp-=dmg; Logger.add(`${def.name} hits ${t.name} for ${dmg}!`,'skill');
       Floaters.add(t.x,t.y,dmg,'#9b5de5');
       AnimSystem.hurtEnemy(t.id);
+      GameState.stats.damageDealt+=dmg;
       if(sid==='fireball') FXSystem.spawn('burst',t.x,t.y,'#ff6600');
       else if(sid==='icebolt') FXSystem.spawn('burst',t.x,t.y,'#88ccff');
       else if(sid==='vampiricblow') FXSystem.spawn('burst',t.x,t.y,'#cc2244');
+      else if(sid==='slash') FXSystem.spawn('hit',t.x,t.y,'#c8c8c8');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
-      if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
+      if(sid==='soul_drain'){ const h=Math.floor(dmg*(def.lifesteal||0.4)); Player.heal(h); Logger.add(`Soul Drain: +${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
+      if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
     return true;
   },
 
   _drop(enemy){
+    // Lich boss always drops Soul Drain tome
+    if(enemy.type==='lich'){
+      Player.addItem({type:'book',name:'Soul Drain Tome',icon:'📕',skill:'soul_drain',baseVal:200},'epic');
+      Logger.add('The Lich drops Soul Drain!','skill');
+    }
     const floor=GameState.floor;
     // Drop chance: 35% on floor 1, rising to 55% by floor 5+
     const dropChance=Math.min(35+floor*4, 55);
@@ -2069,6 +2232,7 @@ const CombatSystem = {
 const GameState = {
   state:'EXPLORE', floor:1, turnCount:0, selectedInvIdx:-1, onStairs:false,
   hitFreezeUntil:0,
+  stats:{ floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 },
   setFloor(n){ this.floor=n; document.getElementById('floor-info').textContent=`FLOOR ${n}`; },
 };
 
@@ -2494,6 +2658,7 @@ const BattleSystem = {
     const e = this.enemy;
     const dmg = Math.max(1, Player.totalAtk - e.def + rng(-2,2));
     e.hp -= dmg;
+    GameState.stats.damageDealt += dmg;
     Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(e.id);
     this._animSwing(); this._animHurtEnemy();
     this._updateUI(); this._renderSprites();
@@ -2519,6 +2684,7 @@ const BattleSystem = {
   _win() {
     const e = this.enemy;
     e.alive = false; e.deathFlash = 8;
+    GameState.stats.enemiesKilled++;
     const goldGained = rng(...e.gold);
     Player.gainExp(e.exp);
     Player.gainGold(goldGained);
@@ -2608,6 +2774,7 @@ const BattleSystem = {
     if (!e.alive) {
       this._log(`${def.name}!  ${e.name} defeated!`, () => {
         this._flash(() => {
+          BattleRenderer.stopLoop(); BattleMusic.stop();
           document.getElementById('battle-screen').classList.remove('active');
           GameState.state = 'EXPLORE';
           this.enemy = null;
@@ -2734,6 +2901,7 @@ const Renderer = {
         const tile=MapGen.tiles[ty][tx], alt=(tx+ty)%2===1;
         if(tile===T.FLOOR||tile===T.STAIRS){
           TilePainter.floor(ctx,sx,sy,TS,TS,alt);
+          if(tile===T.FLOOR && MapGen.decor[ty]?.[tx]) TilePainter.floorDecor(ctx,sx,sy,MapGen.decor[ty][tx]);
         } else {
           // Wall gets a lit top edge when floor is directly south
           const litFace=ty+1<ROWS&&MapGen.tiles[ty+1][tx]!==T.WALL;
@@ -3061,14 +3229,24 @@ const UIManager = {
   },
   showGameOver(){
     GameState.state='GAME_OVER';
-    document.getElementById('death-stats').textContent=
-      `Floor: ${GameState.floor}  ·  Level: ${Player.level}  ·  Turns: ${GameState.turnCount}  ·  Gold: ${Player.gold}`;
+    const s=GameState.stats;
+    document.getElementById('death-stats').innerHTML=
+      `<div>Floor reached: ${GameState.floor}</div>`+
+      `<div>Enemies slain: ${s.enemiesKilled}</div>`+
+      `<div>Gold collected: ${s.goldCollected}</div>`+
+      `<div>Damage dealt: ${s.damageDealt}</div>`+
+      `<div>Damage taken: ${s.damageTaken}</div>`;
     document.getElementById('game-over-screen').classList.add('active');
   },
   showVictory(){
     GameState.state='GAME_OVER';
-    document.getElementById('victory-stats').textContent=
-      `Floor: ${GameState.floor}  ·  Level: ${Player.level}  ·  Turns: ${GameState.turnCount}  ·  Gold: ${Player.gold}`;
+    const s=GameState.stats;
+    document.getElementById('victory-stats').innerHTML=
+      `<div>Floor reached: ${GameState.floor}</div>`+
+      `<div>Enemies slain: ${s.enemiesKilled}</div>`+
+      `<div>Gold collected: ${s.goldCollected}</div>`+
+      `<div>Damage dealt: ${s.damageDealt}</div>`+
+      `<div>Damage taken: ${s.damageTaken}</div>`;
     document.getElementById('victory-screen').classList.add('active');
   },
   closeAllOverlays(){
@@ -3147,6 +3325,7 @@ const Game = {
     document.getElementById('game-over-screen').classList.remove('active');
     UIManager.closeAllOverlays();
     Player.reset(); Logger.clear();
+    GameState.stats = { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
     Logger.add('Welcome to the Crypts of Eternity!','info');
     Logger.add('Explore the dark. Find stairs ▼ to descend.','dim');
     const self=this;
@@ -3155,6 +3334,7 @@ const Game = {
 
   nextFloor(){
     const newFloor=GameState.floor+1;
+    if(GameState.floor>0) GameState.stats.floorsCleared++;
     // POLISH-4: black-cut flash then floor announce
     const canvas=Renderer.canvas;
     if(canvas){
@@ -3414,7 +3594,7 @@ const AmbientMusic = {
 // ============================================================
 const BattleMusic = {
   _gain: null, _running: false, _nextTick: 0, _step: 0, _timerId: null,
-  _BPM: 140, _STEPS: 16,
+  _BPM: 140, _STEPS: 16, _ambientGainBefore: 0.18,
 
   start() {
     if (this._running) return;
@@ -3428,6 +3608,7 @@ const BattleMusic = {
     this._gain.gain.setValueAtTime(this._gain.gain.value, ac.currentTime);
     this._gain.gain.linearRampToValueAtTime(0.55, ac.currentTime + 0.8);
     if (AmbientMusic.masterGain) {
+      this._ambientGainBefore = AmbientMusic.masterGain.gain.value;
       AmbientMusic.masterGain.gain.cancelScheduledValues(ac.currentTime);
       AmbientMusic.masterGain.gain.setValueAtTime(AmbientMusic.masterGain.gain.value, ac.currentTime);
       AmbientMusic.masterGain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.8);
@@ -3450,7 +3631,7 @@ const BattleMusic = {
     if (AmbientMusic.masterGain) {
       AmbientMusic.masterGain.gain.cancelScheduledValues(ac.currentTime);
       AmbientMusic.masterGain.gain.setValueAtTime(AmbientMusic.masterGain.gain.value, ac.currentTime);
-      AmbientMusic.masterGain.gain.linearRampToValueAtTime(0.4, ac.currentTime + 0.8);
+      AmbientMusic.masterGain.gain.linearRampToValueAtTime(this._ambientGainBefore ?? 0.18, ac.currentTime + 1.0);
     }
   },
 
