@@ -223,6 +223,84 @@
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:var(--panel); }
   ::-webkit-scrollbar-thumb { background:var(--border); }
+
+  /* ── Battle Screen ─────────────────────────────────── */
+  #battle-screen {
+    position:fixed; inset:0; z-index:201;
+    background:linear-gradient(180deg,#0c0a18 0%,#14101e 55%,#0a0810 100%);
+    display:none; font-family:var(--font-main); user-select:none;
+  }
+  #battle-screen.active { display:block; }
+
+  #battle-enemy-area {
+    position:absolute; top:8%; right:10%;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  #battle-enemy-name { font-size:11px; color:var(--white); letter-spacing:2px; text-align:center; }
+  #battle-enemy-canvas {
+    image-rendering:pixelated; width:160px; height:160px;
+    background:#0a0818; border:2px solid var(--border);
+  }
+
+  #battle-player-area {
+    position:absolute; bottom:26%; left:8%;
+    display:flex; flex-direction:column; align-items:flex-start; gap:5px;
+  }
+  #battle-player-canvas {
+    image-rendering:pixelated; width:128px; height:128px;
+    background:#100e1c; border:2px solid var(--border);
+  }
+  #battle-player-name { font-size:7px; color:var(--dim); letter-spacing:1px; }
+
+  .battle-stat-row { display:flex; align-items:center; gap:6px; }
+  .battle-bar-lbl  { font-size:7px; color:var(--dim); width:14px; }
+  .battle-track    { height:7px; background:#1a1828; border:1px solid var(--border); width:120px; }
+  .battle-track.wide { width:150px; height:9px; }
+  .battle-fill     { height:100%; transition:width 0.25s; background:var(--green); }
+  .battle-num      { font-size:7px; color:var(--dim); min-width:44px; }
+
+  #battle-log-box {
+    position:absolute; bottom:15%; left:50%; transform:translateX(-50%);
+    width:380px; max-width:88vw; box-sizing:border-box;
+    background:rgba(14,12,30,0.96); border:2px solid var(--border);
+    padding:10px 14px; min-height:44px;
+  }
+  #battle-log-text { margin:0; font-size:9px; line-height:1.6; color:var(--white); text-align:center; }
+
+  #battle-menu {
+    position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px;
+  }
+  .battle-btn {
+    background:#16122a; border:2px solid var(--border);
+    color:var(--dim); font-family:var(--font-main);
+    font-size:8px; padding:8px 14px; cursor:pointer; letter-spacing:1px;
+    transition:border-color 0.1s,color 0.1s;
+  }
+  .battle-btn.selected { border-color:var(--gold); color:var(--gold); }
+  .battle-btn:hover:not(:disabled) { border-color:var(--white); color:var(--white); }
+  .battle-btn:disabled { opacity:0.3; cursor:default; }
+
+  #battle-sub-menu {
+    position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+    display:flex; flex-wrap:wrap; gap:5px; justify-content:center; max-width:420px;
+  }
+  #battle-sub-menu.hidden { display:none; }
+  .battle-sub-btn {
+    background:#0e0c1e; border:1px solid var(--border);
+    color:var(--white); font-family:var(--font-main);
+    font-size:8px; padding:5px 10px; cursor:pointer;
+    transition:border-color 0.1s,color 0.1s;
+  }
+  .battle-sub-btn:hover:not(.insufficient) { border-color:var(--gold); color:var(--gold); }
+  .battle-sub-btn.insufficient { opacity:0.4; cursor:default; pointer-events:none; }
+
+  #battle-transition {
+    position:fixed; inset:0; z-index:202;
+    background:#000; opacity:0; pointer-events:none;
+    transition:opacity 0.35s;
+  }
+  #battle-transition.fade-in { opacity:1; pointer-events:all; }
 </style>
 </head>
 <body>
@@ -323,6 +401,42 @@
 <div id="floor-announce"></div>
 
 <div id="flash"></div>
+
+<div id="battle-screen">
+  <div id="battle-enemy-area">
+    <div id="battle-enemy-name"></div>
+    <div class="battle-stat-row">
+      <span class="battle-bar-lbl">HP</span>
+      <div class="battle-track wide"><div id="enemy-hp-bar" class="battle-fill"></div></div>
+      <span id="enemy-hp-text" class="battle-num"></span>
+    </div>
+    <canvas id="battle-enemy-canvas" width="160" height="160"></canvas>
+  </div>
+  <div id="battle-player-area">
+    <canvas id="battle-player-canvas" width="128" height="128"></canvas>
+    <div id="battle-player-name">ADVENTURER</div>
+    <div class="battle-stat-row">
+      <span class="battle-bar-lbl">HP</span>
+      <div class="battle-track"><div id="player-battle-hp-bar" class="battle-fill"></div></div>
+      <span id="player-battle-hp-text" class="battle-num"></span>
+    </div>
+    <div class="battle-stat-row">
+      <span class="battle-bar-lbl">MP</span>
+      <div class="battle-track"><div id="player-battle-mp-bar" class="battle-fill"></div></div>
+      <span id="player-battle-mp-text" class="battle-num"></span>
+    </div>
+  </div>
+  <div id="battle-log-box"><p id="battle-log-text"></p></div>
+  <div id="battle-menu">
+    <button class="battle-btn" data-idx="0">ATTACK</button>
+    <button class="battle-btn" data-idx="1">SKILLS</button>
+    <button class="battle-btn" data-idx="2">ITEM</button>
+    <button class="battle-btn" data-idx="3">FLEE</button>
+  </div>
+  <div id="battle-sub-menu" class="hidden"></div>
+</div>
+
+<div id="battle-transition"></div>
 
 <script>
 'use strict';
@@ -1743,6 +1857,293 @@ const FXSystem = {
 };
 
 // ============================================================
+//  BattleSystem — Pokémon/Persona-style turn-based combat
+// ============================================================
+const BattleSystem = {
+  enemy: null,
+  _busy: false,
+  _cursor: 0,
+  _phase: 'menu',
+  _logCb: null,
+  _logTimer: null,
+
+  engage(e) {
+    this.enemy = e;
+    this._busy = false; this._cursor = 0;
+    this._phase = 'menu'; this._logCb = null;
+    clearTimeout(this._logTimer);
+    const tr = document.getElementById('battle-transition');
+    tr.classList.add('fade-in');
+    setTimeout(() => {
+      GameState.state = 'BATTLE';
+      document.getElementById('battle-screen').classList.add('active');
+      this._updateUI(); this._renderSprites();
+      this._log(`A ${e.name} appears!`, () => this._showMenu());
+      tr.classList.remove('fade-in');
+    }, 350);
+  },
+
+  _showMenu() {
+    this._phase = 'menu'; this._busy = false; this._cursor = 0;
+    this._highlightMenu();
+    document.getElementById('battle-sub-menu').classList.add('hidden');
+    document.getElementById('battle-log-text').textContent = 'Choose an action.';
+    this._setMenuDisabled(false);
+  },
+
+  _highlightMenu() {
+    document.querySelectorAll('#battle-menu .battle-btn').forEach((b,i) => {
+      b.classList.toggle('selected', i === this._cursor);
+    });
+  },
+
+  _setMenuDisabled(disabled) {
+    document.querySelectorAll('#battle-menu .battle-btn').forEach(b => { b.disabled = disabled; });
+  },
+
+  _updateUI() {
+    const e = this.enemy; if (!e) return;
+    document.getElementById('battle-enemy-name').textContent = e.name.toUpperCase();
+    const er = clamp(e.hp / e.maxHp, 0, 1);
+    const eb = document.getElementById('enemy-hp-bar');
+    eb.style.width = (er*100)+'%';
+    eb.style.background = er>0.5 ? PAL.hpHigh : er>0.25 ? PAL.hpMid : PAL.hpLow;
+    document.getElementById('enemy-hp-text').textContent = `${Math.max(0,e.hp)}/${e.maxHp}`;
+    const pr = clamp(Player.hp / Player.totalMaxHp, 0, 1);
+    const pb = document.getElementById('player-battle-hp-bar');
+    pb.style.width = (pr*100)+'%';
+    pb.style.background = pr>0.5 ? PAL.hpHigh : pr>0.25 ? PAL.hpMid : PAL.hpLow;
+    document.getElementById('player-battle-hp-text').textContent = `${Player.hp}/${Player.totalMaxHp}`;
+    const mr = clamp(Player.mp / Player.maxMp, 0, 1);
+    document.getElementById('player-battle-mp-bar').style.width = (mr*100)+'%';
+    document.getElementById('player-battle-mp-text').textContent = `${Player.mp}/${Player.maxMp}`;
+  },
+
+  _renderSprites() {
+    const ec = document.getElementById('battle-enemy-canvas');
+    const ectx = ec.getContext('2d');
+    ectx.clearRect(0,0,160,160); ectx.imageSmoothingEnabled = false;
+    ectx.save(); ectx.translate(16,16); ectx.scale(4,4);
+    TilePainter.enemy(ectx, 0, 0, TS, TS, this.enemy, {bob:0, hurtAlpha:0});
+    ectx.restore();
+    const pc = document.getElementById('battle-player-canvas');
+    const pctx = pc.getContext('2d');
+    pctx.clearRect(0,0,128,128); pctx.imageSmoothingEnabled = false;
+    pctx.save(); pctx.translate(16,16); pctx.scale(3,3);
+    TilePainter.player(pctx, 0, 0, TS, TS, {bob:0, swingAngle:0, hurtAlpha:0});
+    pctx.restore();
+  },
+
+  _log(text, cb) {
+    this._phase = 'log'; this._busy = true; this._logCb = cb || null;
+    document.getElementById('battle-log-text').textContent = text;
+    clearTimeout(this._logTimer);
+    this._logTimer = setTimeout(() => this._advanceLog(), 900);
+  },
+
+  _advanceLog() {
+    clearTimeout(this._logTimer); this._logTimer = null;
+    const cb = this._logCb; this._logCb = null; this._busy = false;
+    if (cb) cb();
+  },
+
+  _flash(cb) {
+    const tr = document.getElementById('battle-transition');
+    tr.classList.add('fade-in');
+    setTimeout(() => { if (cb) cb(); tr.classList.remove('fade-in'); }, 350);
+  },
+
+  _attack() {
+    this._busy = true; this._setMenuDisabled(true);
+    const e = this.enemy;
+    const dmg = Math.max(1, Player.totalAtk - e.def + rng(-2,2));
+    e.hp -= dmg;
+    Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(e.id);
+    this._updateUI(); this._renderSprites();
+    this._log(`You hit ${e.name} for ${dmg}!`, () => {
+      if (e.hp <= 0) { this._win(); return; }
+      this._enemyTurn();
+    });
+  },
+
+  _enemyTurn() {
+    const e = this.enemy;
+    const dmg = Player.takeDamage(e.atk);
+    Camera.shake(4); flashScreen();
+    this._updateUI(); this._renderSprites();
+    const msg = dmg > 0 ? `${e.name} hits you for ${dmg}!` : `${e.name} attacks!`;
+    this._log(msg, () => {
+      if (Player.hp <= 0) { this._lose(); return; }
+      this._showMenu();
+    });
+  },
+
+  _win() {
+    const e = this.enemy;
+    e.alive = false; e.deathFlash = 8;
+    const goldGained = rng(...e.gold);
+    Player.gainExp(e.exp);
+    Player.gainGold(goldGained);
+    CombatSystem._drop(e);
+    this._log(`${e.name} defeated!  +${e.exp}EXP  +${goldGained}g`, () => {
+      this._flash(() => {
+        document.getElementById('battle-screen').classList.remove('active');
+        GameState.state = 'EXPLORE';
+        this.enemy = null;
+        UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
+        Logger.add(`${e.name} defeated!`, 'loot');
+        Game.endTurn();
+      });
+    });
+  },
+
+  _lose() {
+    this._log('You have been defeated...', () => {
+      this._flash(() => {
+        document.getElementById('battle-screen').classList.remove('active');
+        GameState.state = 'EXPLORE';
+        this.enemy = null;
+        Audio.play('death');
+        UIManager.showGameOver();
+        Renderer.draw(); UIManager.updateAll();
+      });
+    });
+  },
+
+  _flee() {
+    this._busy = true; this._setMenuDisabled(true);
+    const eFloor = ENEMY_DEFS[this.enemy.type]?.floor || 1;
+    const chance = clamp(0.55 - (GameState.floor - eFloor) * 0.08, 0.15, 0.80);
+    if (Math.random() < chance) {
+      this._log('Fled successfully!', () => {
+        this._flash(() => {
+          document.getElementById('battle-screen').classList.remove('active');
+          GameState.state = 'EXPLORE';
+          this.enemy = null;
+          UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
+          Game.endTurn();
+        });
+      });
+    } else {
+      this._log("Couldn't escape!", () => this._enemyTurn());
+    }
+  },
+
+  _showSkills() {
+    this._phase = 'skills';
+    const sub = document.getElementById('battle-sub-menu');
+    sub.innerHTML = ''; sub.classList.remove('hidden');
+    let any = false;
+    Player.skills.forEach((sid, i) => {
+      if (!sid) return; any = true;
+      const def = SKILL_DEFS[sid];
+      const canUse = Player.mp >= def.manaCost;
+      const b = document.createElement('button');
+      b.className = 'battle-sub-btn' + (canUse ? '' : ' insufficient');
+      b.textContent = `${def.icon} ${def.name} (${def.manaCost}MP)`;
+      if (canUse) b.onclick = () => this._useSkill(i);
+      sub.appendChild(b);
+    });
+    if (!any) {
+      const b = document.createElement('button');
+      b.className = 'battle-sub-btn insufficient';
+      b.textContent = 'No skills equipped';
+      sub.appendChild(b);
+    }
+    const back = document.createElement('button');
+    back.className = 'battle-sub-btn';
+    back.textContent = '< BACK';
+    back.onclick = () => this._showMenu();
+    sub.appendChild(back);
+  },
+
+  _useSkill(slot) {
+    const sid = Player.skills[slot]; if (!sid) return;
+    const def = SKILL_DEFS[sid];
+    const ok = CombatSystem.skill(slot);
+    if (!ok) { this._showMenu(); return; }
+    this._updateUI(); this._renderSprites();
+    const e = this.enemy;
+    if (!e.alive) {
+      this._log(`${def.name}!  ${e.name} defeated!`, () => {
+        this._flash(() => {
+          document.getElementById('battle-screen').classList.remove('active');
+          GameState.state = 'EXPLORE';
+          this.enemy = null;
+          UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
+          Game.endTurn();
+        });
+      });
+    } else {
+      this._log(`${def.name}!`, () => this._enemyTurn());
+    }
+  },
+
+  _showItems() {
+    this._phase = 'items';
+    const sub = document.getElementById('battle-sub-menu');
+    sub.innerHTML = ''; sub.classList.remove('hidden');
+    const potions = Player.inventory.filter(inv => inv.item.type === 'potion');
+    if (!potions.length) {
+      const b = document.createElement('button');
+      b.className = 'battle-sub-btn insufficient';
+      b.textContent = 'No usable items';
+      sub.appendChild(b);
+    } else {
+      potions.forEach(({ item }) => {
+        const realIdx = Player.inventory.findIndex(inv => inv.item === item);
+        const b = document.createElement('button');
+        b.className = 'battle-sub-btn';
+        b.textContent = `${item.icon||''} ${item.name}`;
+        b.onclick = () => this._useItem(realIdx);
+        sub.appendChild(b);
+      });
+    }
+    const back = document.createElement('button');
+    back.className = 'battle-sub-btn';
+    back.textContent = '< BACK';
+    back.onclick = () => this._showMenu();
+    sub.appendChild(back);
+  },
+
+  _useItem(idx) {
+    if (idx < 0 || idx >= Player.inventory.length) { this._showMenu(); return; }
+    const { item } = Player.inventory[idx];
+    Player.useItem(idx);
+    this._updateUI(); this._renderSprites();
+    this._log(`Used ${item.icon||''} ${item.name}!`, () => this._enemyTurn());
+  },
+
+  onKey(key) {
+    if (this._phase === 'log') {
+      if (this._logTimer != null) { this._advanceLog(); }
+      return;
+    }
+    if (this._busy) return;
+    if (this._phase === 'menu') {
+      if (key==='ArrowLeft'||key==='a'||key==='A') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
+      if (key==='ArrowRight'||key==='d'||key==='D') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
+      const actions = ['attack','skills','item','flee'];
+      const sel = () => {
+        const a = actions[this._cursor];
+        if (a==='attack') this._attack();
+        else if (a==='skills') this._showSkills();
+        else if (a==='item')   this._showItems();
+        else if (a==='flee')   this._flee();
+      };
+      if (key===' '||key==='Enter') { sel(); return; }
+      if (key==='1') { this._cursor=0; sel(); return; }
+      if (key==='2') { this._cursor=1; sel(); return; }
+      if (key==='3') { this._cursor=2; sel(); return; }
+      if (key==='4') { this._cursor=3; sel(); return; }
+    }
+    if (this._phase==='skills'||this._phase==='items') {
+      if (key==='Escape'||key==='q'||key==='Q') this._showMenu();
+    }
+  },
+};
+
+// ============================================================
 //  Renderer — layered drawing pipeline
 //  Layers (bottom to top):
 //    1. Floor tiles
@@ -1872,6 +2273,12 @@ const Renderer = {
       ctx.fillStyle='#1a0000'; ctx.fillRect(bx,by,bw,3);
       ctx.fillStyle=ratio>0.5?PAL.hpHigh:ratio>0.25?PAL.hpMid:PAL.hpLow;
       ctx.fillRect(bx,by,Math.floor(bw*ratio),3);
+      if(dist(e,Player)===1){
+        ctx.save(); ctx.globalAlpha=pulse; ctx.fillStyle='#ff3333';
+        ctx.font=`bold ${Math.floor(TS*0.5)}px monospace`;
+        ctx.textAlign='center'; ctx.fillText('!',esx+TS/2,esy-3);
+        ctx.restore();
+      }
     }
     for(const e of deadToRemove){
       const idx=EntityManager.enemies.indexOf(e);
@@ -2143,7 +2550,7 @@ const InputHandler = {
     });
   },
   onKey(e){
-    if(GameState.state==='GAME_OVER') return;
+    if(GameState.state==='GAME_OVER'||GameState.state==='BATTLE'&&BattleSystem._busy) return;
     if(!Audio.enabled){ Audio.enabled=true; AmbientMusic.start(GameState.floor); }
     const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' '];
     if(gk.includes(e.key)) e.preventDefault();
@@ -2151,6 +2558,7 @@ const InputHandler = {
     const k=e.key;
     if(k==='i'||k==='I'){ GameState.state==='INVENTORY'?UIManager.closeInventory():GameState.state==='EXPLORE'&&UIManager.openInventory(); return; }
     if(GameState.state==='INVENTORY') return;
+    if(GameState.state==='BATTLE'){ BattleSystem.onKey(k); return; }
     if(GameState.state==='MERCHANT'){ if(k==='e'||k==='E') UIManager.closeMerchant(); return; }
     if(GameState.state!=='EXPLORE') return;
     const dirs={'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0},
@@ -2247,7 +2655,7 @@ const Game = {
     const nx=Player.x+dx, ny=Player.y+dy;
     if(!MapGen.isWalkable(nx,ny)) return;
     const e=EntityManager.at(nx,ny);
-    if(e){ CombatSystem.attack(e); this.endTurn(); return; }
+    if(e){ BattleSystem.engage(e); return; }
     Player.x=nx; Player.y=ny;
     AnimSystem.trigger();
     const tile=MapGen.tiles[ny][nx];
@@ -2266,10 +2674,7 @@ const Game = {
   tryAttack(){
     const t=EntityManager.enemies.find(e=>e.alive&&dist(e,Player)===1);
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
-    CombatSystem.attack(t);
-    FXSystem.spawn('hit',t.x,t.y,'#c8dcf0');
-    AnimSystem.playerSwing=1.0; AnimSystem.start();
-    this.endTurn();
+    BattleSystem.engage(t);
   },
   trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
   tryQuickUse(){
@@ -2301,8 +2706,10 @@ const Game = {
       return;
     }
     GameState.turnCount++;
-    EntityManager.moveEnemies();
-    EntityManager.attackAdjacent();
+    if(GameState.state!=='BATTLE'){
+      EntityManager.moveEnemies();
+      EntityManager.attackAdjacent();
+    }
     // Passive MP regen: 2 MP every 3 turns
     if(GameState.turnCount%3===0) Player.restoreMp(2);
     if(GameState.turnCount%8===0) Player.heal(1);
