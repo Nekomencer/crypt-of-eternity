@@ -231,23 +231,24 @@
     display:none; font-family:var(--font-main); user-select:none;
   }
   #battle-screen.active { display:block; }
+  #battle-bg-canvas { position:absolute; inset:0; z-index:0; width:100%; height:100%; }
 
   #battle-enemy-area {
-    position:absolute; top:8%; right:10%;
+    position:absolute; top:8%; right:10%; z-index:1;
     display:flex; flex-direction:column; align-items:center; gap:8px;
   }
   #battle-enemy-name { font-size:11px; color:var(--white); letter-spacing:2px; text-align:center; }
   #battle-enemy-canvas {
-    image-rendering:pixelated; width:160px; height:160px;
+    image-rendering:pixelated; width:256px; height:256px;
     background:#0a0818; border:2px solid var(--border);
   }
 
   #battle-player-area {
-    position:absolute; bottom:26%; left:8%;
+    position:absolute; bottom:26%; left:8%; z-index:1;
     display:flex; flex-direction:column; align-items:flex-start; gap:5px;
   }
   #battle-player-canvas {
-    image-rendering:pixelated; width:128px; height:128px;
+    image-rendering:pixelated; width:192px; height:192px;
     background:#100e1c; border:2px solid var(--border);
   }
   #battle-player-name { font-size:7px; color:var(--dim); letter-spacing:1px; }
@@ -260,7 +261,7 @@
   .battle-num      { font-size:7px; color:var(--dim); min-width:44px; }
 
   #battle-log-box {
-    position:absolute; bottom:15%; left:50%; transform:translateX(-50%);
+    position:absolute; bottom:15%; left:50%; transform:translateX(-50%); z-index:1;
     width:380px; max-width:88vw; box-sizing:border-box;
     background:rgba(14,12,30,0.96); border:2px solid var(--border);
     padding:10px 14px; min-height:44px;
@@ -268,7 +269,7 @@
   #battle-log-text { margin:0; font-size:9px; line-height:1.6; color:var(--white); text-align:center; }
 
   #battle-menu {
-    position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+    position:absolute; bottom:5%; left:50%; transform:translateX(-50%); z-index:1;
     display:flex; gap:8px;
   }
   .battle-btn {
@@ -282,7 +283,7 @@
   .battle-btn:disabled { opacity:0.3; cursor:default; }
 
   #battle-sub-menu {
-    position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+    position:absolute; bottom:5%; left:50%; transform:translateX(-50%); z-index:1;
     display:flex; flex-wrap:wrap; gap:5px; justify-content:center; max-width:420px;
   }
   #battle-sub-menu.hidden { display:none; }
@@ -403,6 +404,7 @@
 <div id="flash"></div>
 
 <div id="battle-screen">
+  <canvas id="battle-bg-canvas"></canvas>
   <div id="battle-enemy-area">
     <div id="battle-enemy-name"></div>
     <div class="battle-stat-row">
@@ -410,10 +412,10 @@
       <div class="battle-track wide"><div id="enemy-hp-bar" class="battle-fill"></div></div>
       <span id="enemy-hp-text" class="battle-num"></span>
     </div>
-    <canvas id="battle-enemy-canvas" width="160" height="160"></canvas>
+    <canvas id="battle-enemy-canvas" width="256" height="256"></canvas>
   </div>
   <div id="battle-player-area">
-    <canvas id="battle-player-canvas" width="128" height="128"></canvas>
+    <canvas id="battle-player-canvas" width="192" height="192"></canvas>
     <div id="battle-player-name">ADVENTURER</div>
     <div class="battle-stat-row">
       <span class="battle-bar-lbl">HP</span>
@@ -1423,6 +1425,418 @@ const TilePainter = {
       ctx.restore();
     }
   },
+
+  battlePlayer(ctx, W, H, animState) {
+    ctx.imageSmoothingEnabled = false;
+    const ang = animState.swingAngle || 0;
+    const hurt = animState.hurtAlpha || 0;
+
+    // Shadow
+    ctx.save(); ctx.globalAlpha = 0.30;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(Math.floor(W*0.50), Math.floor(H*0.93), Math.floor(W*0.22), Math.floor(H*0.04), 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Cape (dark navy, behind body)
+    ctx.fillStyle = '#1a2850';
+    ctx.beginPath();
+    ctx.moveTo(Math.floor(W*0.38), Math.floor(H*0.36));
+    ctx.lineTo(Math.floor(W*0.28), Math.floor(H*0.56));
+    ctx.lineTo(Math.floor(W*0.34), Math.floor(H*0.74));
+    ctx.lineTo(Math.floor(W*0.65), Math.floor(H*0.74));
+    ctx.lineTo(Math.floor(W*0.70), Math.floor(H*0.56));
+    ctx.lineTo(Math.floor(W*0.62), Math.floor(H*0.36));
+    ctx.closePath(); ctx.fill();
+
+    // Boots
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
+    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
+    ctx.fillStyle = '#5a3820';
+    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), 2);
+    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), 2);
+
+    // Legs
+    ctx.fillStyle = '#1e3060';
+    ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
+    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
+
+    // Belt
+    ctx.fillStyle = '#5a3010';
+    ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.60), Math.floor(W*0.34), Math.floor(H*0.04));
+    ctx.fillStyle = '#c89a30';
+    ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.60), Math.floor(W*0.06), Math.floor(H*0.04));
+
+    // Torso
+    ctx.fillStyle = PAL.playerBody;
+    ctx.fillRect(Math.floor(W*0.36), Math.floor(H*0.37), Math.floor(W*0.28), Math.floor(H*0.25));
+    ctx.fillStyle = '#888090';
+    ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.38), Math.floor(W*0.12), Math.floor(H*0.23));
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.38), Math.floor(W*0.12), 2);
+
+    // Shoulder pauldrons
+    ctx.fillStyle = '#707080';
+    ctx.fillRect(Math.floor(W*0.30), Math.floor(H*0.37), Math.floor(W*0.08), Math.floor(H*0.10));
+    ctx.fillRect(Math.floor(W*0.62), Math.floor(H*0.37), Math.floor(W*0.08), Math.floor(H*0.10));
+    ctx.fillStyle = '#c8c0d0';
+    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.40), 2, 2); ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.44), 2, 2);
+    ctx.fillRect(Math.floor(W*0.65), Math.floor(H*0.40), 2, 2); ctx.fillRect(Math.floor(W*0.65), Math.floor(H*0.44), 2, 2);
+
+    // Left arm + shield
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(Math.floor(W*0.21), Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
+    ctx.fillStyle = '#8890a8';
+    ctx.fillRect(Math.floor(W*0.11), Math.floor(H*0.40), Math.floor(W*0.13), Math.floor(H*0.22));
+    ctx.strokeStyle = '#505868'; ctx.lineWidth = 2;
+    ctx.strokeRect(Math.floor(W*0.11), Math.floor(H*0.40), Math.floor(W*0.13), Math.floor(H*0.22));
+    ctx.fillStyle = '#b0b8c8';
+    ctx.fillRect(Math.floor(W*0.17), Math.floor(H*0.42), 2, Math.floor(H*0.18));
+    ctx.fillRect(Math.floor(W*0.12), Math.floor(H*0.51), Math.floor(W*0.11), 2);
+
+    // Right arm + sword (rotated by swing angle)
+    ctx.save();
+    const pivX = Math.floor(W*0.65), pivY = Math.floor(H*0.42);
+    ctx.translate(pivX, pivY); ctx.rotate(ang); ctx.translate(-pivX, -pivY);
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(pivX, Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
+    ctx.fillStyle = '#6a3810';
+    ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.59), Math.floor(W*0.04), Math.floor(H*0.07));
+    ctx.fillStyle = '#888090';
+    ctx.beginPath(); ctx.arc(Math.floor(W*0.70), Math.floor(H*0.67), Math.floor(W*0.03), 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#9b5de5';
+    ctx.fillRect(Math.floor(W*0.64), Math.floor(H*0.57), Math.floor(W*0.12), Math.floor(H*0.025));
+    ctx.fillStyle = '#c8d8e8';
+    ctx.fillRect(Math.floor(W*0.69), Math.floor(H*0.27), Math.floor(W*0.024), Math.floor(H*0.31));
+    ctx.fillStyle = '#e8f0f8';
+    ctx.fillRect(Math.floor(W*0.69), Math.floor(H*0.27), 2, Math.floor(H*0.31));
+    ctx.restore();
+
+    // Head
+    const hx = Math.floor(W*0.37), hy = Math.floor(H*0.08);
+    const hw = Math.floor(W*0.26), hh = Math.floor(H*0.28);
+    ctx.fillStyle = PAL.playerSkin;
+    ctx.fillRect(hx, hy, hw, hh);
+    ctx.fillStyle = PAL.playerHair;
+    ctx.fillRect(hx, hy, hw, Math.floor(hh*0.30));
+    ctx.fillRect(hx, hy + Math.floor(hh*0.30), Math.floor(hw*0.16), Math.floor(hh*0.22));
+    ctx.fillRect(hx + Math.floor(hw*0.84), hy + Math.floor(hh*0.30), Math.floor(hw*0.16), Math.floor(hh*0.22));
+    ctx.fillStyle = '#201808';
+    ctx.fillRect(hx + Math.floor(hw*0.35) - 2, hy + Math.floor(hh*0.55), 4, 3);
+    ctx.fillRect(hx + Math.floor(hw*0.65) - 2, hy + Math.floor(hh*0.55), 4, 3);
+    ctx.fillRect(hx + Math.floor(hw*0.50) - 1, hy + Math.floor(hh*0.65), 2, 2);
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(hx + Math.floor(hw*0.30), hy + Math.floor(hh*0.72), 3, 1);
+
+    // Hurt flash
+    if (hurt > 0) {
+      ctx.save(); ctx.globalAlpha = hurt * 0.6;
+      ctx.fillStyle = 'rgba(255,80,80,1)'; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+  },
+
+  battleEnemy(ctx, type, W, H, animState) {
+    ctx.imageSmoothingEnabled = false;
+    const hurt = animState.hurtAlpha || 0;
+
+    // Shadow
+    ctx.save(); ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(Math.floor(W*0.50), Math.floor(H*0.96), Math.floor(W*0.22), Math.floor(H*0.022), 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    if (type === 'goblin') {
+      const s = PAL.goblin;
+      // Left arm (hanging)
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.27), Math.floor(H*0.50), Math.floor(W*0.10), Math.floor(H*0.22));
+      // Right arm (dagger)
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.50), Math.floor(W*0.10), Math.floor(H*0.20));
+      // Body
+      ctx.fillRect(Math.floor(W*0.37), Math.floor(H*0.48), Math.floor(W*0.26), Math.floor(H*0.32));
+      // Loincloth
+      ctx.fillStyle = '#5a3a10';
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.68), Math.floor(W*0.24), Math.floor(H*0.14));
+      for (let i = 0; i < 4; i++) ctx.fillRect(Math.floor(W*(0.39+i*0.058)), Math.floor(H*0.78), Math.floor(W*0.04), Math.floor(H*0.04));
+      // Dagger
+      ctx.fillStyle = '#5a3a10';
+      ctx.fillRect(Math.floor(W*0.67), Math.floor(H*0.68), Math.floor(W*0.04), Math.floor(H*0.06));
+      ctx.fillStyle = '#c0c0c0';
+      ctx.fillRect(Math.floor(W*0.682), Math.floor(H*0.52), Math.floor(W*0.016), Math.floor(H*0.17));
+      // Feet
+      ctx.fillStyle = '#2a6030';
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.81), Math.floor(W*0.10), Math.floor(H*0.06));
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.81), Math.floor(W*0.10), Math.floor(H*0.06));
+      // Neck
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.45), Math.floor(H*0.40), Math.floor(W*0.10), Math.floor(H*0.10));
+      // Head (wider than tall 1.2:1)
+      const hx = Math.floor(W*0.35), hy = Math.floor(H*0.18);
+      const hw = Math.floor(W*0.30), hh = Math.floor(H*0.24);
+      ctx.fillStyle = s; ctx.fillRect(hx, hy, hw, hh);
+      // Ears
+      ctx.beginPath(); ctx.moveTo(hx, hy+Math.floor(hh*0.30)); ctx.lineTo(hx-Math.floor(W*0.07), hy+Math.floor(hh*0.10)); ctx.lineTo(hx, hy+Math.floor(hh*0.70)); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(hx+hw, hy+Math.floor(hh*0.30)); ctx.lineTo(hx+hw+Math.floor(W*0.07), hy+Math.floor(hh*0.10)); ctx.lineTo(hx+hw, hy+Math.floor(hh*0.70)); ctx.closePath(); ctx.fill();
+      // Eyes
+      const eyeY = hy + Math.floor(hh*0.32);
+      ctx.fillStyle = '#ffdd00';
+      ctx.fillRect(hx+Math.floor(hw*0.12), eyeY, Math.floor(W*0.038), Math.floor(H*0.030));
+      ctx.fillRect(hx+Math.floor(hw*0.58), eyeY, Math.floor(W*0.038), Math.floor(H*0.030));
+      ctx.fillStyle = '#000';
+      ctx.fillRect(hx+Math.floor(hw*0.19), eyeY+2, Math.floor(W*0.015), Math.floor(H*0.015));
+      ctx.fillRect(hx+Math.floor(hw*0.65), eyeY+2, Math.floor(W*0.015), Math.floor(H*0.015));
+      // Grin
+      const gy = hy + Math.floor(hh*0.72);
+      ctx.fillStyle = '#0a3010';
+      ctx.fillRect(hx+Math.floor(hw*0.10), gy, Math.floor(hw*0.80), Math.floor(H*0.026));
+      ctx.fillStyle = '#e8e8c0';
+      for (let t = 0; t < 3; t++) ctx.fillRect(hx+Math.floor(hw*(0.16+t*0.24)), gy-Math.floor(H*0.022), Math.floor(W*0.024), Math.floor(H*0.022));
+      // Warts
+      ctx.fillStyle = '#2a7030';
+      [[hx+hw*0.18,hy+hh*0.52],[hx+hw*0.72,hy+hh*0.38],[W*0.37+W*0.10,H*0.54],[W*0.37+W*0.18,H*0.68]].forEach(([wx,wy])=>{ ctx.beginPath(); ctx.arc(wx,wy,3,0,Math.PI*2); ctx.fill(); });
+
+    } else if (type === 'orc') {
+      const s = PAL.orc;
+      // Boots
+      ctx.fillStyle = '#2a1a10';
+      ctx.fillRect(Math.floor(W*0.20), Math.floor(H*0.82), Math.floor(W*0.22), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.58), Math.floor(H*0.82), Math.floor(W*0.22), Math.floor(H*0.14));
+      // Legs
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.22), Math.floor(H*0.65), Math.floor(W*0.18), Math.floor(H*0.20));
+      ctx.fillRect(Math.floor(W*0.60), Math.floor(H*0.65), Math.floor(W*0.18), Math.floor(H*0.20));
+      // Left arm + fist
+      ctx.fillRect(Math.floor(W*0.06), Math.floor(H*0.38), Math.floor(W*0.14), Math.floor(H*0.32));
+      ctx.fillRect(Math.floor(W*0.05), Math.floor(H*0.68), Math.floor(W*0.13), Math.floor(H*0.10));
+      // Axe (handle + head)
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(W*0.86), Math.floor(H*0.50), Math.floor(W*0.04), Math.floor(H*0.36));
+      ctx.fillStyle = '#404050';
+      ctx.fillRect(Math.floor(W*0.80), Math.floor(H*0.36), Math.floor(W*0.18), Math.floor(H*0.22));
+      ctx.fillStyle = '#a0a8b0';
+      ctx.fillRect(Math.floor(W*0.80), Math.floor(H*0.36), 2, Math.floor(H*0.22));
+      // Right arm
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.80), Math.floor(H*0.38), Math.floor(W*0.14), Math.floor(H*0.32));
+      // Body (70% shoulder width)
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.36), Math.floor(W*0.70), Math.floor(H*0.32));
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.45), Math.floor(W*0.70), Math.floor(H*0.012));
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.52), Math.floor(W*0.70), Math.floor(H*0.012));
+      // Shoulder armor
+      ctx.fillStyle = '#303040';
+      ctx.fillRect(Math.floor(W*0.10), Math.floor(H*0.34), Math.floor(W*0.17), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.73), Math.floor(H*0.34), Math.floor(W*0.17), Math.floor(H*0.14));
+      ctx.fillStyle = '#8080a0';
+      [[0.14,0.37],[0.22,0.37],[0.75,0.37],[0.83,0.37]].forEach(([fx,fy])=>ctx.fillRect(Math.floor(W*fx),Math.floor(H*fy),3,3));
+      // Neck
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.40), Math.floor(H*0.24), Math.floor(W*0.20), Math.floor(H*0.14));
+      // Head
+      const hx = Math.floor(W*0.30), hy = Math.floor(H*0.06);
+      const hw = Math.floor(W*0.40), hh = Math.floor(H*0.20);
+      ctx.fillStyle = s; ctx.fillRect(hx, hy, hw, hh);
+      // Scar
+      ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(hx+Math.floor(hw*0.25), hy+Math.floor(hh*0.10)); ctx.lineTo(hx+Math.floor(hw*0.68), hy+Math.floor(hh*0.90)); ctx.stroke();
+      // Eyes
+      ctx.fillStyle = '#cc2020';
+      ctx.fillRect(hx+Math.floor(hw*0.14), hy+Math.floor(hh*0.30), Math.floor(W*0.022), Math.floor(H*0.018));
+      ctx.fillRect(hx+Math.floor(hw*0.62), hy+Math.floor(hh*0.30), Math.floor(W*0.022), Math.floor(H*0.018));
+      ctx.fillStyle = '#000';
+      ctx.fillRect(hx+Math.floor(hw*0.20), hy+Math.floor(hh*0.34), Math.floor(W*0.010), Math.floor(H*0.010));
+      ctx.fillRect(hx+Math.floor(hw*0.68), hy+Math.floor(hh*0.34), Math.floor(W*0.010), Math.floor(H*0.010));
+      // Tusks
+      ctx.fillStyle = '#f0f0d8';
+      ctx.fillRect(hx+Math.floor(hw*0.28), hy+hh-2, Math.floor(W*0.036), Math.floor(H*0.046));
+      ctx.fillRect(hx+Math.floor(hw*0.58), hy+hh-2, Math.floor(W*0.036), Math.floor(H*0.046));
+
+    } else if (type === 'skeleton') {
+      const bone = PAL.skeleton;
+      ctx.save(); ctx.translate(W*0.50, H*0.50); ctx.rotate(0.05); ctx.translate(-W*0.50, -H*0.50);
+      // Rags
+      ctx.save(); ctx.globalAlpha = 0.40; ctx.fillStyle = '#6a5840';
+      ctx.fillRect(Math.floor(W*0.37), Math.floor(H*0.57), Math.floor(W*0.26), Math.floor(H*0.18));
+      ctx.globalAlpha = 1; ctx.restore();
+      // Pelvis
+      ctx.fillStyle = bone;
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.54), Math.floor(W*0.24), Math.floor(H*0.08));
+      ctx.fillStyle = '#606050';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.40), Math.floor(H*0.58), 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.60), Math.floor(H*0.58), 4, 0, Math.PI*2); ctx.fill();
+      // Ribcage
+      ctx.fillStyle = bone;
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.35), Math.floor(W*0.24), Math.floor(H*0.20));
+      ctx.strokeStyle = '#707060'; ctx.lineWidth = 1;
+      for (let r = 0; r < 5; r++) {
+        const ry = H*0.37 + r*H*0.034;
+        ctx.beginPath(); ctx.moveTo(W*0.38, ry); ctx.quadraticCurveTo(W*0.50, ry+H*0.012, W*0.62, ry); ctx.stroke();
+      }
+      // Bony legs + knees
+      ctx.fillStyle = bone;
+      [[0.40,0.62,0.08,0.15],[0.39,0.76,0.10,0.035],[0.40,0.79,0.08,0.12],
+       [0.52,0.62,0.08,0.15],[0.51,0.76,0.10,0.035],[0.52,0.79,0.08,0.12]].forEach(([x,y,w,h])=>ctx.fillRect(Math.floor(W*x),Math.floor(H*y),Math.floor(W*w),Math.floor(H*h)));
+      ctx.fillRect(Math.floor(W*0.34), Math.floor(H*0.90), Math.floor(W*0.15), Math.floor(H*0.036));
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.90), Math.floor(W*0.15), Math.floor(H*0.036));
+      // Bony arms + elbows
+      [[0.28,0.36,0.09,0.13],[0.27,0.48,0.11,0.030],[0.28,0.51,0.08,0.12],
+       [0.63,0.36,0.09,0.13],[0.62,0.48,0.11,0.030],[0.63,0.51,0.08,0.12]].forEach(([x,y,w,h])=>ctx.fillRect(Math.floor(W*x),Math.floor(H*y),Math.floor(W*w),Math.floor(H*h)));
+      // Rusted sword
+      ctx.fillStyle = '#a08060';
+      ctx.fillRect(Math.floor(W*0.643), Math.floor(H*0.22), Math.floor(W*0.026), Math.floor(H*0.30));
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(Math.floor(W*0.58), Math.floor(H*0.46), Math.floor(W*0.11), Math.floor(H*0.018));
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(W*0.644), Math.floor(H*0.47), Math.floor(W*0.024), Math.floor(H*0.08));
+      // Skull
+      const hx = Math.floor(W*0.35), hy = Math.floor(H*0.08);
+      const hw = Math.floor(W*0.30), hh = Math.floor(H*0.25);
+      ctx.fillStyle = bone;
+      ctx.fillRect(hx, hy+Math.floor(hh*0.22), hw, Math.floor(hh*0.78));
+      ctx.beginPath(); ctx.arc(hx+Math.floor(hw*0.50), hy+Math.floor(hh*0.32), Math.floor(hw*0.50), 0, Math.PI*2); ctx.fill();
+      // Crack
+      ctx.strokeStyle = '#707060'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(hx+Math.floor(hw*0.50), hy); ctx.lineTo(hx+Math.floor(hw*0.45), hy+Math.floor(hh*0.30)); ctx.lineTo(hx+Math.floor(hw*0.52), hy+Math.floor(hh*0.48)); ctx.stroke();
+      // Eye sockets
+      ctx.fillStyle = '#101010';
+      ctx.beginPath(); ctx.ellipse(hx+Math.floor(hw*0.28), hy+Math.floor(hh*0.44), Math.floor(hw*0.14), Math.floor(hh*0.16), 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx+Math.floor(hw*0.72), hy+Math.floor(hh*0.44), Math.floor(hw*0.14), Math.floor(hh*0.16), 0, 0, Math.PI*2); ctx.fill();
+      // Nasal diamond
+      ctx.beginPath(); ctx.moveTo(hx+Math.floor(hw*0.50), hy+Math.floor(hh*0.56)); ctx.lineTo(hx+Math.floor(hw*0.43), hy+Math.floor(hh*0.63)); ctx.lineTo(hx+Math.floor(hw*0.50), hy+Math.floor(hh*0.69)); ctx.lineTo(hx+Math.floor(hw*0.57), hy+Math.floor(hh*0.63)); ctx.closePath(); ctx.fill();
+      // Jaw + teeth
+      ctx.fillStyle = bone;
+      ctx.fillRect(hx+Math.floor(hw*0.10), hy+Math.floor(hh*0.87), Math.floor(hw*0.80), Math.floor(hh*0.15));
+      ctx.fillStyle = '#e0e0c8';
+      for (let t = 0; t < 4; t++) ctx.fillRect(hx+Math.floor(hw*(0.14+t*0.19)), hy+Math.floor(hh*0.75), Math.floor(W*0.030), Math.floor(H*0.030));
+      ctx.restore();
+
+    } else if (type === 'troll') {
+      const s = PAL.troll;
+      // Feet
+      ctx.fillStyle = '#4a2880';
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.88), Math.floor(W*0.28), Math.floor(H*0.08));
+      ctx.fillRect(Math.floor(W*0.57), Math.floor(H*0.88), Math.floor(W*0.28), Math.floor(H*0.08));
+      // Legs
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.18), Math.floor(H*0.78), Math.floor(W*0.20), Math.floor(H*0.12));
+      ctx.fillRect(Math.floor(W*0.62), Math.floor(H*0.78), Math.floor(W*0.20), Math.floor(H*0.12));
+      // Club
+      ctx.fillStyle = '#5a3810';
+      ctx.fillRect(Math.floor(W*0.85), Math.floor(H*0.14), Math.floor(W*0.10), Math.floor(H*0.68));
+      ctx.fillStyle = '#606070';
+      for (let sp = 0; sp < 7; sp++) ctx.fillRect(Math.floor(W*0.85)-6, Math.floor(H*0.17)+sp*Math.floor(H*0.038), 7, 4);
+      // Left arm + fist
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.02), Math.floor(H*0.50), Math.floor(W*0.14), Math.floor(H*0.30));
+      ctx.fillRect(Math.floor(W*0.01), Math.floor(H*0.78), Math.floor(W*0.16), Math.floor(H*0.10));
+      // Right arm
+      ctx.fillRect(Math.floor(W*0.84), Math.floor(H*0.50), Math.floor(W*0.14), Math.floor(H*0.30));
+      // Body
+      ctx.fillRect(Math.floor(W*0.075), Math.floor(H*0.30), Math.floor(W*0.85), Math.floor(H*0.58));
+      // Knobbly texture
+      ctx.fillStyle = '#5a3090';
+      [[0.18,0.36],[0.36,0.32],[0.62,0.38],[0.80,0.44],[0.14,0.52],[0.48,0.48],[0.76,0.58],[0.28,0.62],[0.58,0.66],[0.86,0.70],[0.20,0.72],[0.44,0.78],[0.68,0.76],[0.24,0.86],[0.54,0.83],[0.34,0.43],[0.70,0.47],[0.10,0.40],[0.88,0.60],[0.40,0.70],[0.60,0.55],[0.26,0.55],[0.76,0.36],[0.50,0.60]].forEach(([kx,ky])=>{ ctx.beginPath(); ctx.arc(W*kx,H*ky,4+Math.floor((kx*37+ky*23)%3),0,Math.PI*2); ctx.fill(); });
+      // Shoulders
+      ctx.fillStyle = s;
+      ctx.fillRect(0, Math.floor(H*0.27), Math.floor(W*0.14), Math.floor(H*0.24));
+      ctx.fillRect(Math.floor(W*0.86), Math.floor(H*0.27), Math.floor(W*0.14), Math.floor(H*0.24));
+      // Neck
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.22), Math.floor(W*0.24), Math.floor(H*0.10));
+      // Head
+      const hx = Math.floor(W*0.25), hy = Math.floor(H*0.04);
+      const hw = Math.floor(W*0.50), hh = Math.floor(H*0.20);
+      ctx.fillStyle = s; ctx.fillRect(hx, hy, hw, hh);
+      ctx.fillStyle = '#cc0000';
+      ctx.fillRect(hx+Math.floor(hw*0.14), hy+Math.floor(hh*0.24), Math.floor(W*0.018), Math.floor(H*0.018));
+      ctx.fillRect(hx+Math.floor(hw*0.72), hy+Math.floor(hh*0.24), Math.floor(W*0.018), Math.floor(H*0.018));
+      ctx.fillStyle = '#5a2870';
+      ctx.fillRect(hx+Math.floor(hw*0.40), hy+Math.floor(hh*0.44), Math.floor(hw*0.20), Math.floor(hh*0.22));
+      ctx.fillStyle = '#1a0830';
+      ctx.fillRect(hx+Math.floor(hw*0.14), hy+Math.floor(hh*0.70), Math.floor(hw*0.72), Math.floor(hh*0.20));
+      ctx.fillStyle = '#e0d8c8';
+      ctx.fillRect(hx+Math.floor(hw*0.18), hy+Math.floor(hh*0.70), Math.floor(hw*0.14), Math.floor(hh*0.12));
+      ctx.fillRect(hx+Math.floor(hw*0.66), hy+Math.floor(hh*0.70), Math.floor(hw*0.14), Math.floor(hh*0.12));
+
+    } else if (type === 'demon') {
+      const s = PAL.demon;
+      const ft = performance.now() * 0.001;
+      // Dark aura
+      const aura = ctx.createRadialGradient(W*0.50,H*0.50,H*0.10,W*0.50,H*0.50,H*0.70);
+      aura.addColorStop(0,'transparent'); aura.addColorStop(1,'rgba(80,0,0,0.30)');
+      ctx.fillStyle = aura; ctx.fillRect(0, 0, W, H);
+      // Tail
+      ctx.strokeStyle = '#901010'; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(W*0.50,H*0.70); ctx.bezierCurveTo(W*0.24,H*0.80,W*0.18,H*0.90,W*0.28,H*0.96); ctx.stroke();
+      ctx.fillStyle = '#901010';
+      ctx.beginPath(); ctx.moveTo(W*0.23,H*0.97); ctx.lineTo(W*0.28,H*0.93); ctx.lineTo(W*0.33,H*0.98); ctx.closePath(); ctx.fill();
+      // Wings
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = '#601010';
+      ctx.beginPath(); ctx.moveTo(W*0.38,H*0.27); ctx.lineTo(W*0.04,H*0.10); ctx.lineTo(W*0.02,H*0.46); ctx.lineTo(W*0.10,H*0.62); ctx.lineTo(W*0.35,H*0.50); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#3a0808'; ctx.lineWidth=1.5;
+      [[W*0.38,H*0.27,W*0.05,H*0.18],[W*0.38,H*0.27,W*0.03,H*0.38],[W*0.38,H*0.27,W*0.12,H*0.57]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
+      ctx.fillStyle = '#601010';
+      ctx.beginPath(); ctx.moveTo(W*0.62,H*0.27); ctx.lineTo(W*0.96,H*0.10); ctx.lineTo(W*0.98,H*0.46); ctx.lineTo(W*0.90,H*0.62); ctx.lineTo(W*0.65,H*0.50); ctx.closePath(); ctx.fill();
+      [[W*0.62,H*0.27,W*0.95,H*0.18],[W*0.62,H*0.27,W*0.97,H*0.38],[W*0.62,H*0.27,W*0.88,H*0.57]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
+      ctx.restore();
+      // Legs + clawed feet
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.38),Math.floor(H*0.68),Math.floor(W*0.10),Math.floor(H*0.18));
+      ctx.fillRect(Math.floor(W*0.52),Math.floor(H*0.68),Math.floor(W*0.10),Math.floor(H*0.18));
+      ctx.fillStyle = '#801010';
+      ctx.fillRect(Math.floor(W*0.34),Math.floor(H*0.84),Math.floor(W*0.17),Math.floor(H*0.05));
+      ctx.fillRect(Math.floor(W*0.49),Math.floor(H*0.84),Math.floor(W*0.17),Math.floor(H*0.05));
+      // Arms + claws
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.23),Math.floor(H*0.28),Math.floor(W*0.13),Math.floor(H*0.28));
+      ctx.fillRect(Math.floor(W*0.64),Math.floor(H*0.28),Math.floor(W*0.13),Math.floor(H*0.28));
+      ctx.fillStyle = '#601010';
+      for (let c = 0; c < 3; c++) {
+        ctx.fillRect(Math.floor(W*(0.24+c*0.040)),Math.floor(H*0.555),4,8);
+        ctx.fillRect(Math.floor(W*(0.65+c*0.040)),Math.floor(H*0.555),4,8);
+      }
+      // Body
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.36),Math.floor(H*0.26),Math.floor(W*0.28),Math.floor(H*0.44));
+      ctx.fillStyle = '#801010';
+      [[0.43,0.30],[0.43,0.38],[0.43,0.46]].forEach(([fx,fy])=>ctx.fillRect(Math.floor(W*fx),Math.floor(H*fy),Math.floor(W*0.14),Math.floor(H*0.04)));
+      // Neck + head
+      ctx.fillStyle = s;
+      ctx.fillRect(Math.floor(W*0.43),Math.floor(H*0.18),Math.floor(W*0.14),Math.floor(H*0.10));
+      const hx = Math.floor(W*0.34), hy = Math.floor(H*0.04);
+      const hw = Math.floor(W*0.32), hh = Math.floor(H*0.16);
+      ctx.fillRect(hx, hy, hw, hh);
+      // Horns (3 per side)
+      ctx.fillStyle = '#601010';
+      [[W*0.34,hy+hh*0.3,W*0.20,hy-H*0.04],[W*0.30,hy+hh*0.4,W*0.15,hy+H*0.02],[W*0.38,hy+hh*0.2,W*0.26,hy-H*0.02]].forEach(([bx2,by2,tx,ty])=>{ ctx.beginPath(); ctx.moveTo(bx2-5,by2+8); ctx.lineTo(tx,ty); ctx.lineTo(bx2+4,by2); ctx.closePath(); ctx.fill(); });
+      [[W*0.66,hy+hh*0.3,W*0.80,hy-H*0.04],[W*0.70,hy+hh*0.4,W*0.85,hy+H*0.02],[W*0.62,hy+hh*0.2,W*0.74,hy-H*0.02]].forEach(([bx2,by2,tx,ty])=>{ ctx.beginPath(); ctx.moveTo(bx2-4,by2+8); ctx.lineTo(tx,ty); ctx.lineTo(bx2+5,by2); ctx.closePath(); ctx.fill(); });
+      // Glowing eyes
+      [0.25,0.75].forEach((ex)=>{
+        const egx = hx+hw*ex, egy = hy+hh*0.45;
+        const eg = ctx.createRadialGradient(egx,egy,0,egx,egy,20);
+        eg.addColorStop(0,'rgba(255,220,0,0.50)'); eg.addColorStop(1,'transparent');
+        ctx.fillStyle = eg; ctx.fillRect(hx+hw*(ex-0.25),hy,Math.floor(hw*0.50),hh);
+      });
+      ctx.fillStyle = '#ffe000';
+      ctx.fillRect(Math.floor(hx+hw*0.14),Math.floor(hy+hh*0.35),Math.floor(W*0.030),Math.floor(H*0.024));
+      ctx.fillRect(Math.floor(hx+hw*0.64),Math.floor(hy+hh*0.35),Math.floor(W*0.030),Math.floor(H*0.024));
+      // Flame aura
+      ctx.save(); ctx.globalAlpha = 0.35;
+      for (let f = 0; f < 3; f++) {
+        const fl = 0.80+0.20*Math.sin(ft*4+f*1.5);
+        ctx.fillStyle = f%2===0?'#ff4400':'#ff8800';
+        ctx.beginPath(); ctx.ellipse(W*(0.32+f*0.18),H*0.92,W*0.07*fl,H*0.04,0,0,Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Hurt flash
+    if (hurt > 0) {
+      ctx.save(); ctx.globalAlpha = hurt * 0.70;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+  },
 };
 
 // ============================================================
@@ -1857,6 +2271,95 @@ const FXSystem = {
 };
 
 // ============================================================
+//  BattleRenderer — animated dungeon background for battle screen
+// ============================================================
+const BattleRenderer = {
+  canvas: null, ctx: null, running: false,
+  init() {
+    this.canvas = document.getElementById('battle-bg-canvas');
+    this.ctx    = this.canvas.getContext('2d');
+    this._resize();
+  },
+  _resize() {
+    const s = document.getElementById('battle-screen');
+    this.canvas.width  = s.offsetWidth  || window.innerWidth;
+    this.canvas.height = s.offsetHeight || window.innerHeight;
+  },
+  draw() {
+    const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+    const t   = performance.now() / 1000;
+    ctx.clearRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+    sky.addColorStop(0, '#05030e'); sky.addColorStop(1, '#0e0b1c');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H * 0.55);
+    const bW = Math.floor(W / 6), bH = Math.floor(H * 0.12);
+    for (let row = 0; row < 5; row++) {
+      const off = row % 2 === 0 ? 0 : Math.floor(bW * 0.5);
+      for (let col = -1; col < 8; col++) {
+        const bx = col * bW + off, by = row * bH;
+        const shade = 18 + ((row * 7 + col * 3) % 8);
+        ctx.fillStyle = `rgb(${shade},${shade-2},${shade+8})`;
+        ctx.fillRect(bx + 1, by + 1, bW - 2, bH - 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillRect(bx + 1, by + 1, bW - 2, 2); ctx.fillRect(bx + 1, by + 1, 2, bH - 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(bx + 1, by + bH - 3, bW - 2, 2);
+      }
+    }
+    ctx.strokeStyle = '#0a0818'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8;
+    for (let row = 0; row <= 5; row++) { ctx.beginPath(); ctx.moveTo(0, row * bH); ctx.lineTo(W, row * bH); ctx.stroke(); }
+    for (let row = 0; row < 5; row++) {
+      const off = row % 2 === 0 ? 0 : Math.floor(bW * 0.5);
+      for (let col = 0; col < 8; col++) {
+        const bx = col * bW + off;
+        ctx.beginPath(); ctx.moveTo(bx, row * bH); ctx.lineTo(bx, (row + 1) * bH); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    const floorY = H * 0.55;
+    const fg = ctx.createLinearGradient(0, floorY, 0, H);
+    fg.addColorStop(0, '#3a3840'); fg.addColorStop(1, '#252330');
+    ctx.fillStyle = fg; ctx.fillRect(0, floorY, W, H - floorY);
+    const sW = Math.floor(W / 8), sH = Math.floor(H * 0.10);
+    for (let row = 0; row < 5; row++) {
+      const off = row % 2 === 0 ? 0 : Math.floor(sW * 0.5);
+      for (let col = -1; col < 10; col++) {
+        const sx = col * sW + off, sy = floorY + row * sH;
+        const shade2 = 52 + ((row * 5 + col * 3) % 10);
+        ctx.fillStyle = `rgb(${shade2},${shade2},${shade2+4})`;
+        ctx.fillRect(sx + 1, sy + 1, sW - 2, sH - 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(sx + 1, sy + 1, sW - 2, 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(sx + 1, sy + sH - 2, sW - 2, 1);
+      }
+    }
+    ctx.strokeStyle = '#1e1c28'; ctx.lineWidth = 1; ctx.globalAlpha = 0.9;
+    for (let row = 0; row <= 5; row++) { ctx.beginPath(); ctx.moveTo(0, floorY + row * sH); ctx.lineTo(W, floorY + row * sH); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    const torchPositions = [{ x: W * 0.15, y: bH * 2.6 }, { x: W * 0.85, y: bH * 2.6 }];
+    for (const tp of torchPositions) {
+      const flicker = 0.80 + 0.20 * Math.sin(t * 7.3 + tp.x);
+      ctx.fillStyle = '#2a2030'; ctx.fillRect(tp.x - 3, tp.y, 6, 10);
+      ctx.fillStyle = '#ff8c00'; ctx.fillRect(tp.x - 3, tp.y - 5, 6, 5);
+      ctx.fillStyle = '#ffcc44'; ctx.fillRect(tp.x - 2, tp.y - 8, 4, 4);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(tp.x - 1, tp.y - 10, 2, 3);
+      const gr = ctx.createRadialGradient(tp.x, tp.y - 2, 0, tp.x, tp.y - 2, 80 * flicker);
+      gr.addColorStop(0, 'rgba(255,160,30,0.22)'); gr.addColorStop(0.4, 'rgba(255,100,10,0.10)'); gr.addColorStop(1, 'transparent');
+      ctx.save(); ctx.globalAlpha = flicker; ctx.fillStyle = gr;
+      ctx.fillRect(tp.x - 100, tp.y - 90, 200, 180); ctx.restore();
+    }
+    const vg = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.8);
+    vg.addColorStop(0, 'transparent'); vg.addColorStop(1, 'rgba(0,0,0,0.60)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  },
+  startLoop() {
+    if (this.running) return; this.running = true;
+    const tick = () => { if (!this.running) return; this.draw(); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  },
+  stopLoop() { this.running = false; }
+};
+
+// ============================================================
 //  BattleSystem — Pokémon/Persona-style turn-based combat
 // ============================================================
 const BattleSystem = {
@@ -1866,6 +2369,9 @@ const BattleSystem = {
   _phase: 'menu',
   _logCb: null,
   _logTimer: null,
+  _enemyHurt: 0,
+  _playerHurt: 0,
+  _playerSwing: 0,
 
   engage(e) {
     this.enemy = e;
@@ -1876,6 +2382,8 @@ const BattleSystem = {
     tr.classList.add('fade-in');
     setTimeout(() => {
       GameState.state = 'BATTLE';
+      BattleRenderer.startLoop();
+      BattleMusic.start();
       document.getElementById('battle-screen').classList.add('active');
       this._updateUI(); this._renderSprites();
       this._log(`A ${e.name} appears!`, () => this._showMenu());
@@ -1922,16 +2430,44 @@ const BattleSystem = {
   _renderSprites() {
     const ec = document.getElementById('battle-enemy-canvas');
     const ectx = ec.getContext('2d');
-    ectx.clearRect(0,0,160,160); ectx.imageSmoothingEnabled = false;
-    ectx.save(); ectx.translate(16,16); ectx.scale(4,4);
-    TilePainter.enemy(ectx, 0, 0, TS, TS, this.enemy, {bob:0, hurtAlpha:0});
-    ectx.restore();
+    ectx.clearRect(0, 0, ec.width, ec.height);
+    ectx.imageSmoothingEnabled = false;
+    TilePainter.battleEnemy(ectx, this.enemy.type, ec.width, ec.height,
+      { bob: 0, hurtAlpha: this._enemyHurt || 0 });
     const pc = document.getElementById('battle-player-canvas');
     const pctx = pc.getContext('2d');
-    pctx.clearRect(0,0,128,128); pctx.imageSmoothingEnabled = false;
-    pctx.save(); pctx.translate(16,16); pctx.scale(3,3);
-    TilePainter.player(pctx, 0, 0, TS, TS, {bob:0, swingAngle:0, hurtAlpha:0});
-    pctx.restore();
+    pctx.clearRect(0, 0, pc.width, pc.height);
+    pctx.imageSmoothingEnabled = false;
+    TilePainter.battlePlayer(pctx, pc.width, pc.height,
+      { bob: 0, swingAngle: this._playerSwing || 0, hurtAlpha: this._playerHurt || 0 });
+  },
+
+  _animHurtEnemy() {
+    this._enemyHurt = 1.0;
+    const decay = () => {
+      this._enemyHurt = (this._enemyHurt||0)*0.78; this._renderSprites();
+      if(this._enemyHurt>0.04) requestAnimationFrame(decay);
+      else { this._enemyHurt=0; this._renderSprites(); }
+    };
+    requestAnimationFrame(decay);
+  },
+  _animHurtPlayer() {
+    this._playerHurt = 1.0;
+    const decay = () => {
+      this._playerHurt = (this._playerHurt||0)*0.78; this._renderSprites();
+      if(this._playerHurt>0.04) requestAnimationFrame(decay);
+      else { this._playerHurt=0; this._renderSprites(); }
+    };
+    requestAnimationFrame(decay);
+  },
+  _animSwing() {
+    this._playerSwing = 1.0;
+    const decay = () => {
+      this._playerSwing = (this._playerSwing||0)*0.72; this._renderSprites();
+      if(this._playerSwing>0.04) requestAnimationFrame(decay);
+      else { this._playerSwing=0; this._renderSprites(); }
+    };
+    requestAnimationFrame(decay);
   },
 
   _log(text, cb) {
@@ -1959,6 +2495,7 @@ const BattleSystem = {
     const dmg = Math.max(1, Player.totalAtk - e.def + rng(-2,2));
     e.hp -= dmg;
     Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(e.id);
+    this._animSwing(); this._animHurtEnemy();
     this._updateUI(); this._renderSprites();
     this._log(`You hit ${e.name} for ${dmg}!`, () => {
       if (e.hp <= 0) { this._win(); return; }
@@ -1970,6 +2507,7 @@ const BattleSystem = {
     const e = this.enemy;
     const dmg = Player.takeDamage(e.atk);
     Camera.shake(4); flashScreen();
+    this._animHurtPlayer();
     this._updateUI(); this._renderSprites();
     const msg = dmg > 0 ? `${e.name} hits you for ${dmg}!` : `${e.name} attacks!`;
     this._log(msg, () => {
@@ -1987,6 +2525,7 @@ const BattleSystem = {
     CombatSystem._drop(e);
     this._log(`${e.name} defeated!  +${e.exp}EXP  +${goldGained}g`, () => {
       this._flash(() => {
+        BattleRenderer.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
         GameState.state = 'EXPLORE';
         this.enemy = null;
@@ -2000,6 +2539,7 @@ const BattleSystem = {
   _lose() {
     this._log('You have been defeated...', () => {
       this._flash(() => {
+        BattleRenderer.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
         GameState.state = 'EXPLORE';
         this.enemy = null;
@@ -2017,6 +2557,7 @@ const BattleSystem = {
     if (Math.random() < chance) {
       this._log('Fled successfully!', () => {
         this._flash(() => {
+          BattleRenderer.stopLoop(); BattleMusic.stop();
           document.getElementById('battle-screen').classList.remove('active');
           GameState.state = 'EXPLORE';
           this.enemy = null;
@@ -2591,7 +3132,7 @@ const InputHandler = {
 // ============================================================
 const Game = {
   init(){
-    Renderer.init(); InputHandler.init();
+    Renderer.init(); InputHandler.init(); BattleRenderer.init();
     document.getElementById('start-btn').onclick=()=>this.startGame();
     document.getElementById('restart-btn').onclick=()=>this.startGame();
     document.getElementById('victory-btn').onclick=()=>this.startGame();
@@ -2866,6 +3407,124 @@ const AmbientMusic = {
     }catch(e){}
     setTimeout(()=>this._scheduleArp(), 2000+Math.random()*5000);
   },
+};
+
+// ============================================================
+//  BattleMusic — 140BPM dungeon battle sequencer
+// ============================================================
+const BattleMusic = {
+  _gain: null, _running: false, _nextTick: 0, _step: 0, _timerId: null,
+  _BPM: 140, _STEPS: 16,
+
+  start() {
+    if (this._running) return;
+    this._running = true;
+    const ac = Audio._ctx();
+    if (!this._gain) {
+      this._gain = ac.createGain(); this._gain.gain.value = 0;
+      this._gain.connect(ac.destination);
+    }
+    this._gain.gain.cancelScheduledValues(ac.currentTime);
+    this._gain.gain.setValueAtTime(this._gain.gain.value, ac.currentTime);
+    this._gain.gain.linearRampToValueAtTime(0.55, ac.currentTime + 0.8);
+    if (AmbientMusic.masterGain) {
+      AmbientMusic.masterGain.gain.cancelScheduledValues(ac.currentTime);
+      AmbientMusic.masterGain.gain.setValueAtTime(AmbientMusic.masterGain.gain.value, ac.currentTime);
+      AmbientMusic.masterGain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.8);
+    }
+    this._step = 0;
+    this._nextTick = ac.currentTime + 0.05;
+    this._schedule();
+  },
+
+  stop() {
+    if (!this._running) return;
+    this._running = false;
+    clearTimeout(this._timerId);
+    const ac = Audio._ctx();
+    if (this._gain) {
+      this._gain.gain.cancelScheduledValues(ac.currentTime);
+      this._gain.gain.setValueAtTime(this._gain.gain.value, ac.currentTime);
+      this._gain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.8);
+    }
+    if (AmbientMusic.masterGain) {
+      AmbientMusic.masterGain.gain.cancelScheduledValues(ac.currentTime);
+      AmbientMusic.masterGain.gain.setValueAtTime(AmbientMusic.masterGain.gain.value, ac.currentTime);
+      AmbientMusic.masterGain.gain.linearRampToValueAtTime(0.4, ac.currentTime + 0.8);
+    }
+  },
+
+  _schedule() {
+    if (!this._running) return;
+    const ac = Audio._ctx(), mg = this._gain;
+    const secPerStep = 60 / (this._BPM * 4);
+    const lookahead = 0.15;
+    while (this._nextTick < ac.currentTime + lookahead) {
+      this._playStep(ac, mg, this._nextTick, this._step);
+      this._step = (this._step + 1) % this._STEPS;
+      this._nextTick += secPerStep;
+    }
+    this._timerId = setTimeout(() => this._schedule(), 60);
+  },
+
+  _playStep(ac, mg, when, step) {
+    // kick: steps 0, 4, 8, 12
+    if (step % 4 === 0) {
+      const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.18), ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 8);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(1.5, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
+      src.connect(lp); lp.connect(eg); eg.connect(mg); src.start(when);
+    }
+    // snare: steps 4, 12
+    if (step === 4 || step === 12) {
+      const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.12), ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.8;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(1.0, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.12);
+      src.connect(bp); bp.connect(eg); eg.connect(mg); src.start(when);
+    }
+    // hi-hat: every even step
+    if (step % 2 === 0) {
+      const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.04), ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(0.35, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.04);
+      src.connect(hp); hp.connect(eg); eg.connect(mg); src.start(when);
+    }
+    // bass sawtooth — E minor pattern
+    const bassNotes = [41.2, 41.2, 49.0, 41.2, 36.7, 41.2, 43.7, 41.2, 41.2, 49.0, 41.2, 55.0, 41.2, 49.0, 43.7, 41.2];
+    if (step % 2 === 0) {
+      const osc = ac.createOscillator(); osc.type = 'sawtooth';
+      osc.frequency.value = bassNotes[step];
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(0.45, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
+      osc.connect(lp); lp.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.30);
+    }
+    // melody arpeggio (triangle) — every 3 steps
+    if (step % 3 === 0) {
+      const melNotes = [164.8, 196.0, 220.0, 196.0, 174.6, 196.0, 164.8, 220.0, 246.9, 220.0, 196.0, 164.8, 220.0, 246.9, 261.6, 246.9];
+      const osc = ac.createOscillator(); osc.type = 'triangle';
+      osc.frequency.value = melNotes[step % melNotes.length];
+      const eg = ac.createGain(); eg.gain.setValueAtTime(0.20, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.22);
+      osc.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.24);
+    }
+    // chord pad (sine) on beats 0 and 8
+    if (step === 0 || step === 8) {
+      const chords = step === 0 ? [82.4, 98.0, 123.5] : [73.4, 98.0, 110.0];
+      for (const freq of chords) {
+        const osc = ac.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+        const eg = ac.createGain(); eg.gain.setValueAtTime(0.10, when); eg.gain.linearRampToValueAtTime(0.08, when + 0.30); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.80);
+        osc.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.82);
+      }
+    }
+  }
 };
 
 // ============================================================
