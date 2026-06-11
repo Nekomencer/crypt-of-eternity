@@ -968,7 +968,7 @@ const SKILL_DEFS = {
   slash:         {id:'slash',         name:'Slash',       icon:'⚔', manaCost:8, range:1,aoe:false,dmgMul:1.5,skillType:'damage',desc:'A powerful sword strike. 150% ATK.'},
   fireball:      {id:'fireball',      name:'Fireball',    icon:'🔥',manaCost:15,range:4,aoe:false,dmgMul:2.2,skillType:'damage',desc:'Hurl fireball at enemy within 4 tiles.'},
   icebolt:       {id:'icebolt',       name:'Ice Bolt',    icon:'❄', manaCost:12,range:3,aoe:false,dmgMul:1.8,skillType:'damage',desc:'Freeze an enemy, moderate damage.'},
-  thunderstrike: {id:'thunderstrike', name:'Thunder',     icon:'⚡',manaCost:20,range:2,aoe:true, dmgMul:1.5,skillType:'damage',desc:'Lightning hits all enemies in range.'},
+  thunderstrike: {id:'thunderstrike', name:'Thunder',     icon:'⚡',manaCost:20,range:2,aoe:true, dmgMul:1.5,skillType:'damage',desc:'Lightning shocks all enemies (40% fumble chance for 2 turns).'},
   shadowstep:    {id:'shadowstep',    name:'Shadow Step', icon:'🌑',manaCost:18,range:5,aoe:false,dmgMul:0,  skillType:'movement',desc:'Teleport to a random floor tile.'},
   vampiricblow:  {id:'vampiricblow',  name:'Vampiric',    icon:'🩸',manaCost:22,range:1,aoe:false,dmgMul:1.6,skillType:'damage',desc:'Strike enemy, heal 50% of damage.'},
   spiritwave:    {id:'spiritwave',    name:'Spirit Wave', icon:'🌊',manaCost:25,range:3,aoe:true, dmgMul:2.0,skillType:'damage',desc:'Push spirit energy forward.'},
@@ -982,15 +982,33 @@ const SKILL_DEFS = {
 };
 
 // ── ITEMS ─────────────────────────────────────────────────────
-const mkW = (n,i,a,f) => ({type:'weapon',name:n,icon:i,atk:a,floor:f,baseVal:a*10});
-const mkA = (n,i,d,h,f) => ({type:'armor', name:n,icon:i,def:d,hp:h||0,floor:f,baseVal:(d+h/5)*10});
+const mkW = (n,i,a,f,c='any') => ({type:'weapon',name:n,icon:i,atk:a,floor:f,baseVal:a*10,forClass:c});
+const mkA = (n,i,d,h,f,c='any') => ({type:'armor', name:n,icon:i,def:d,hp:h||0,floor:f,baseVal:(d+h/5)*10,forClass:c});
 const mkP = (n,i,h,m,f) => ({type:'potion',name:n,icon:i,hp:h||0,mp:m||0,floor:f,baseVal:25});
 const ITEM_POOL = [
-  mkW('Rusty Dagger','🗡',3,1),mkW('Short Sword','⚔',6,1),mkW('Long Sword','⚔',10,2),
-  mkW('Battle Axe','🪓',14,3),mkW('War Hammer','🔨',18,4),mkW('Flame Blade','🔥',24,5),mkW('Soul Reaper','💀',32,6),
-  mkA('Leather Vest','🥋',2,10,1),mkA('Chain Mail','🛡',4,20,2),mkA('Steel Plate','🛡',7,35,3),
-  mkA('Shadow Cloak','🌑',5,50,4),mkA('Dragon Scale','🐉',12,70,5),
-  mkP('Health Potion','🧪',30,0,1),mkP('Mana Potion','💧',0,25,1),mkP('Full Potion','⚗',50,40,3),
+  // ── WARRIOR weapons (swords, axes, hammers)
+  mkW('Short Sword','⚔',6,1,'warrior'), mkW('Long Sword','⚔',10,2,'warrior'),
+  mkW('Battle Axe','🪓',14,3,'warrior'), mkW('War Hammer','🔨',18,4,'warrior'),
+  mkW('Flame Blade','🔥',24,5,'warrior'), mkW('Soul Reaper','💀',32,6,'warrior'),
+  // ── WARRIOR armor (heavy)
+  mkA('Chain Mail','🛡',4,20,2,'warrior'), mkA('Steel Plate','🛡',7,35,3,'warrior'),
+  mkA('Dragon Scale','🐉',12,70,5,'warrior'),
+  // ── ROGUE weapons (daggers, blades)
+  mkW('Rusty Dagger','🗡',3,1,'rogue'), mkW('Bone Dagger','🗡',7,2,'rogue'),
+  mkW('Shadow Blade','🌑',12,3,'rogue'), mkW('Venom Edge','🗡',18,5,'rogue'),
+  mkW('Assassin Fang','🗡',27,7,'rogue'),
+  // ── ROGUE armor (light)
+  mkA('Leather Vest','🥋',2,10,1,'rogue'), mkA('Shadow Cloak','🌑',5,25,3,'rogue'),
+  mkA('Nightshroud','🌑',8,45,5,'rogue'),
+  // ── MAGE weapons (staves, wands)
+  mkW('Wooden Staff','🪄',4,1,'mage'), mkW('Crystal Staff','🔮',9,2,'mage'),
+  mkW('Arcane Staff','⚡',15,4,'mage'), mkW('Elder Wand','✨',22,6,'mage'),
+  mkW('Void Scepter','💜',30,8,'mage'),
+  // ── MAGE armor (robes)
+  mkA('Silk Robe','👘',1,15,1,'mage'), mkA('Mage Cloak','🧙',3,30,2,'mage'),
+  mkA('Arcane Vestment','✨',6,55,4,'mage'), mkA('Starweave Robe','⭐',10,80,6,'mage'),
+  // ── Universal potions (any class)
+  mkP('Health Potion','🧪',30,0,1), mkP('Mana Potion','💧',0,25,1), mkP('Full Potion','⚗',50,40,3),
 ];
 const SKILL_BOOKS = [
   {id:'bk_fire',   skill:'fireball',      name:'Tome of Fire',    icon:'📕',price:80},
@@ -2416,7 +2434,7 @@ const EntityManager = {
         def:  Math.round(def.def *(1+(floor-1)*0.10)),
         exp:  Math.round(def.exp *fm),
         gold: [Math.round(def.gold[0]*gm), Math.round(def.gold[1]*gm)],
-        alive:true, statusEffects:{frozen:0,burning:0,burnDmg:0}});
+        alive:true, statusEffects:{frozen:0,burning:0,burnDmg:0,shocked:0}});
     }
     for(let i=0;i<numC;i++){ const p=place(); if(p) this.chests.push({x:p.x,y:p.y,opened:false}); }
     if(hasMerchant){ const p=place(); if(p) this.merchant={x:p.x,y:p.y}; }
@@ -2428,7 +2446,7 @@ const EntityManager = {
       const existIdx=this.enemies.findIndex(e=>e.x===bx&&e.y===by);
       if(existIdx>=0) this.enemies.splice(existIdx,1);
       const ld={...ENEMY_DEFS.lich};
-      this.enemies.push({...ld,id:this.enemies.length,x:bx,y:by,alive:true,maxHp:ld.hp,statusEffects:{frozen:0,burning:0,burnDmg:0}});
+      this.enemies.push({...ld,id:this.enemies.length,x:bx,y:by,alive:true,maxHp:ld.hp,statusEffects:{frozen:0,burning:0,burnDmg:0,shocked:0}});
     }
 
     // Guarantee a health potion in the player's starting room on floor 1
@@ -2560,7 +2578,7 @@ const CombatSystem = {
       for(const e of targets){
         const dmg=Math.max(1,Math.floor(Player.totalAtk*def.dmgMul));
         e.hp-=dmg; GameState.stats.damageDealt+=dmg;
-        e.statusEffects=e.statusEffects||{frozen:0,burning:0,burnDmg:0}; e.statusEffects.frozen=2;
+        e.statusEffects=e.statusEffects||{frozen:0,burning:0,burnDmg:0,shocked:0}; e.statusEffects.frozen=2;
         Logger.add(`Blizzard! ${e.name} frozen (${dmg} dmg)!`,'skill');
         FXSystem.spawn('burst',e.x,e.y,'#88ccff'); AnimSystem.hurtEnemy(e.id);
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; e._rewarded=true; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
@@ -2580,7 +2598,7 @@ const CombatSystem = {
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
         AnimSystem.hurtEnemy(e.id);
         GameState.stats.damageDealt+=dmg;
-        if(sid==='thunderstrike'){ FXSystem.spawn('lightning',e.x,e.y,'#ffee44'); e.statusEffects=e.statusEffects||{frozen:0,burning:0,burnDmg:0}; e.statusEffects.frozen=1; }
+        if(sid==='thunderstrike'){ FXSystem.spawn('lightning',e.x,e.y,'#ffee44'); e.statusEffects=e.statusEffects||{frozen:0,burning:0,burnDmg:0,shocked:0}; e.statusEffects.shocked=2; Logger.add(`${e.name} is SHOCKED!`,'skill'); }
         else if(sid==='spiritwave') FXSystem.spawn('burst',e.x,e.y,'#44aaff');
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; e._rewarded=true; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
@@ -2602,9 +2620,9 @@ const CombatSystem = {
       else if(sid==='shieldbash') FXSystem.spawn('hit',t.x,t.y,'#ffee44');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
       if(sid==='soul_drain'){ const h=Math.floor(dmg*(def.lifesteal||0.4)); Player.heal(h); Logger.add(`Soul Drain: +${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
-      if(sid==='shieldbash'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0}; t.statusEffects.frozen=1; Logger.add(`${t.name} is stunned!`,'info'); }
-      if(sid==='icebolt'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0}; t.statusEffects.frozen=2; Logger.add(`${t.name} is FROZEN!`,'info'); }
-      if(sid==='fireball'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0}; t.statusEffects.burning=3; t.statusEffects.burnDmg=Math.floor(dmg*0.2)||1; Logger.add(`${t.name} is BURNING!`,'warn'); }
+      if(sid==='shieldbash'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0,shocked:0}; t.statusEffects.frozen=1; Logger.add(`${t.name} is stunned!`,'info'); }
+      if(sid==='icebolt'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0,shocked:0}; t.statusEffects.frozen=2; Logger.add(`${t.name} is FROZEN!`,'info'); }
+      if(sid==='fireball'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0,shocked:0}; t.statusEffects.burning=3; t.statusEffects.burnDmg=Math.floor(dmg*0.2)||1; Logger.add(`${t.name} is BURNING!`,'warn'); }
       if(t.hp<=0){ t.alive=false; t.deathFlash=8; t._rewarded=true; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
     return true;
@@ -2619,20 +2637,20 @@ const CombatSystem = {
       if(ep){ MapGen.tiles[ep.y][ep.x]=T.EXIT; Logger.add('✨ An exit portal shimmers into existence!','skill'); }
     }
     const floor=GameState.floor;
-    // Drop chance: 35% on floor 1, rising to 55% by floor 5+
-    const dropChance=Math.min(35+floor*4, 55);
+    // Drop chance: 12% on floor 1, rising to 30% by floor 7+
+    const dropChance=Math.min(12+floor*3, 30);
     if(rng(1,100)>dropChance) return;
 
-    // 50% of drops are health potions (guaranteed healing support)
-    // 20% mana potions, 30% other items
+    // 55% health potions, 25% mana potions, 20% equipment
     const roll=rng(1,100);
+    const playerClass=Player.passive==='fortitude'?'warrior':Player.passive==='arcane'?'mage':'rogue';
     let item;
-    if(roll<=50){
+    if(roll<=55){
       item={...mkP('Health Potion','🧪',30,0,1), baseVal:25};
-    } else if(roll<=70){
+    } else if(roll<=80){
       item={...mkP('Mana Potion','💧',0,25,1), baseVal:25};
     } else {
-      const pool=ITEM_POOL.filter(it=>it.floor<=floor&&it.type!=='book'&&it.type!=='potion');
+      const pool=ITEM_POOL.filter(it=>it.floor<=floor&&it.type!=='book'&&it.type!=='potion'&&(it.forClass==='any'||it.forClass===playerClass));
       if(!pool.length){ item={...mkP('Health Potion','🧪',30,0,1), baseVal:25}; }
       else { item={...pool[rng(0,pool.length-1)]}; }
     }
@@ -2657,10 +2675,11 @@ const CombatSystem = {
   openChest(ch){
     if(ch.opened) return; ch.opened=true;
     Audio.play('chest');
-    const gold=rng(10,20+GameState.floor*8);
+    const gold=rng(5,8+GameState.floor*4);
     Player.gainGold(gold); Logger.add(`Chest opened! +${gold} gold`,'gold');
+    const playerClass=Player.passive==='fortitude'?'warrior':Player.passive==='arcane'?'mage':'rogue';
     if(rng(0,1)===1){
-      const pool=ITEM_POOL.filter(it=>it.floor<=GameState.floor);
+      const pool=ITEM_POOL.filter(it=>it.floor<=GameState.floor&&(it.forClass==='any'||it.forClass===playerClass));
       if(pool.length){
         const item={...pool[rng(0,pool.length-1)]};
         const rarity=this._rarity(GameState.floor);
@@ -2695,7 +2714,8 @@ const MerchantSystem = {
     if(floor===this.generatedFloor) return;
     this.generatedFloor=floor;
     this.stock=[];
-    const pool=ITEM_POOL.filter(it=>it.floor<=floor+1);
+    const playerClass=Player.passive==='fortitude'?'warrior':Player.passive==='arcane'?'mage':'rogue';
+    const pool=ITEM_POOL.filter(it=>it.floor<=floor+1&&(it.forClass==='any'||it.forClass===playerClass));
     for(let i=0;i<rng(3,5);i++){
       const item={...pool[rng(0,pool.length-1)]};
       const rarity=CombatSystem._rarity(floor);
@@ -3223,6 +3243,7 @@ const BattleSystem = {
       // Tick ATK buff
       if (Player.atkBuffTurns > 0) { Player.atkBuffTurns--; if (!Player.atkBuffTurns) { Player.atkBuffAmt=0; Logger.add('ATK buff expired.','dim'); } }
       if (Player.hp <= 0) { this._lose(); return; }
+      if (this._checkAllDead()) return; // safety: catch enemies killed mid-turn
       this._showMenu(); return;
     }
     const e = alive[idx];
@@ -3233,6 +3254,14 @@ const BattleSystem = {
       e.statusEffects.frozen--;
       this._log(e.name+' is FROZEN and can\'t act!', () => this._doEnemyAttacks(alive, idx+1), '#88ccff');
       return;
+    }
+    // Shocked enemies have a 40% chance to fumble their attack
+    if (e.statusEffects?.shocked > 0) {
+      e.statusEffects.shocked--;
+      if (Math.random() < 0.4) {
+        this._log(e.name+' is SHOCKED and fumbles!', () => this._doEnemyAttacks(alive, idx+1), '#ffee44');
+        return;
+      }
     }
     const dmg = Player.takeDamage(e.atk);
     Camera.shake(4); flashScreen();
@@ -3245,6 +3274,7 @@ const BattleSystem = {
   },
 
   _winAll() {
+    this._setMenuDisabled(true); // prevent any button clicks during victory sequence
     let totalExp=0, totalGold=0;
     const defeated=[];
     for (const e of this.enemies) {
@@ -3579,6 +3609,7 @@ const Renderer = {
       ctx.fillRect(bx,by,Math.floor(bw*ratio),3);
       // Status effect icons
       if(e.statusEffects?.frozen>0){ ctx.font=`${Math.floor(TS*0.45)}px serif`; ctx.textAlign='center'; ctx.fillText('🧊',esx+TS-8,esy+10); }
+      else if(e.statusEffects?.shocked>0){ ctx.font=`${Math.floor(TS*0.45)}px serif`; ctx.textAlign='center'; ctx.fillText('⚡',esx+TS-8,esy+10); }
       else if(e.statusEffects?.burning>0){ ctx.font=`${Math.floor(TS*0.45)}px serif`; ctx.textAlign='center'; ctx.fillText('🔥',esx+TS-8,esy+10); }
       if(dist(e,Player)===1){
         ctx.save(); ctx.globalAlpha=pulse; ctx.fillStyle='#ff3333';
@@ -3901,7 +3932,8 @@ const InputHandler = {
     });
   },
   onKey(e){
-    if(GameState.state==='GAME_OVER'||GameState.state==='BATTLE'&&BattleSystem._busy) return;
+    if(GameState.state==='GAME_OVER') return;
+    if(GameState.state==='BATTLE'&&BattleSystem._busy&&BattleSystem._phase!=='log') return;
     if(!Audio.enabled){ Audio.enabled=true; AmbientMusic.start(GameState.floor); }
     const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' ','z','Z','x','X','c','C','v','V','Escape'];
     if(gk.includes(e.key)) e.preventDefault();
