@@ -26,6 +26,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; height: 100%; }
 
+  html { overflow: hidden; position: fixed; width: 100%; height: 100%; }
   body {
     background: var(--bg); color: var(--white);
     font-family: var(--font-main); font-size: 10px;
@@ -33,6 +34,7 @@
     height: 100vh; overflow: hidden; user-select: none;
     margin: 0; touch-action: none;
     -webkit-user-select: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* TITLE */
@@ -346,12 +348,22 @@
     gap: 3px;
     z-index: 50;
     touch-action: none;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  #dpad-up     { grid-column: 2; grid-row: 1; }
-  #dpad-left   { grid-column: 1; grid-row: 2; }
-  #dpad-center { grid-column: 2; grid-row: 2; background: transparent !important; border: none !important; }
-  #dpad-right  { grid-column: 3; grid-row: 2; }
-  #dpad-down   { grid-column: 2; grid-row: 3; }
+  #dpad-upleft   { grid-column: 1; grid-row: 1; }
+  #dpad-up       { grid-column: 2; grid-row: 1; }
+  #dpad-upright  { grid-column: 3; grid-row: 1; }
+  #dpad-left     { grid-column: 1; grid-row: 2; }
+  #dpad-center   { grid-column: 2; grid-row: 2; background: transparent !important; border: none !important; }
+  #dpad-right    { grid-column: 3; grid-row: 2; }
+  #dpad-downleft { grid-column: 1; grid-row: 3; }
+  #dpad-down     { grid-column: 2; grid-row: 3; }
+  #dpad-downright{ grid-column: 3; grid-row: 3; }
+  #dpad-upleft, #dpad-upright, #dpad-downleft, #dpad-downright {
+    font-size: 13px;
+    opacity: 0.7;
+  }
   .dpad-btn {
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.18);
@@ -378,6 +390,8 @@
     gap: 6px;
     z-index: 50;
     touch-action: none;
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .action-btn {
     background: rgba(90,88,112,0.55);
@@ -439,7 +453,7 @@
 
     #left-panel {
       width: 100%;
-      max-height: 110px;
+      max-height: 90px;
       flex-direction: row;
       flex-wrap: wrap;
       overflow: hidden;
@@ -458,6 +472,7 @@
     #map-area {
       flex: 1;
       position: relative;
+      padding-bottom: 155px;
     }
     #map-canvas {
       image-rendering: pixelated;
@@ -465,6 +480,63 @@
 
     #right-panel { display: none; }
     #bottom-bar { display: none; }
+
+    /* Title screen */
+    #title-screen { padding: 20px 16px; gap: 12px; }
+    #title-screen h1 { font-size: 16px; }
+    #title-screen p { font-size: 7px; }
+    #start-btn, #continue-btn { padding: 12px 20px; font-size: 9px; width: 200px; }
+    #abandon-btn { padding: 10px 20px !important; font-size: 9px !important; width: 200px; }
+    #best-runs { font-size: 6px !important; max-width: 100% !important; }
+
+    /* Class selection screen */
+    #class-screen { padding: 16px; gap: 16px; overflow-y: auto; }
+    #class-screen h2 { font-size: 11px; }
+    #class-cards { flex-direction: column; width: 100%; max-height: 60vh; overflow-y: auto; }
+    #class-cards > div { min-width: unset !important; width: 100% !important; }
+
+    /* Settings & pause overlays */
+    #settings-overlay .overlay-box,
+    #pause-overlay { padding: 16px; }
+    #pause-overlay h2 { font-size: 14px; }
+    #settings-overlay input[type=range] { width: 100%; }
+    #pause-overlay { padding-bottom: env(safe-area-inset-bottom, 16px); }
+
+    /* Action buttons layout */
+    #action-btns {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 4px;
+      max-width: 160px;
+      bottom: 16px;
+      right: 8px;
+    }
+    .action-btn {
+      min-width: 44px;
+      min-height: 44px;
+      font-size: 11px;
+      padding: 6px 8px;
+    }
+    #btn-attack {
+      padding: 10px 14px !important;
+      width: 100%;
+    }
+
+    /* Inventory grid */
+    #inv-grid { grid-template-columns: repeat(4, 1fr); }
+    .inv-cell { min-height: 56px; font-size: 22px; }
+    #item-detail .item-name { font-size: 8px; }
+    #item-detail .item-desc { font-size: 12px; }
+    .item-btn { min-height: 44px; font-size: 8px; padding: 8px 12px; }
+
+    /* Battle screen layout */
+    #battle-screen { overflow: hidden; }
+    #battle-enemy-area { top: 4% !important; right: 4% !important; }
+    #battle-player-area { bottom: 22% !important; left: 4% !important; }
+    #battle-log-box { bottom: 13% !important; width: 92% !important; }
+    #battle-menu { bottom: 2% !important; gap: 5px !important; }
+    #battle-enemy-name { font-size: 9px !important; }
 
     #battle-menu {
       display: flex;
@@ -484,6 +556,7 @@
     #battle-player-canvas { width: 120px !important; height: 120px !important; }
     #battle-enemy-area, #battle-player-area { gap: 4px; }
 
+    /* Overlays full-screen */
     #inv-overlay .overlay-box,
     #merchant-overlay .overlay-box {
       position: fixed;
@@ -498,6 +571,13 @@
     }
     .inv-cell { min-height: 44px; }
     .merchant-item { min-height: 44px; }
+
+    /* Merchant tabs */
+    .merchant-tab { min-height: 44px; font-size: 10px; padding: 8px 16px; }
+
+    /* Skill manager */
+    .slot-btn { min-height: 44px; min-width: 44px; font-size: 9px; padding: 6px 8px; }
+    .known-skill-row { padding: 8px; }
   }
 </style>
 </head>
@@ -661,11 +741,15 @@
 <div id="battle-transition"></div>
 
 <div id="dpad" aria-label="Movement controls">
-  <button class="dpad-btn" id="dpad-up"    data-key="ArrowUp">▲</button>
-  <button class="dpad-btn" id="dpad-left"  data-key="ArrowLeft">◀</button>
+  <button class="dpad-btn" id="dpad-upleft"    data-key="z">↖</button>
+  <button class="dpad-btn" id="dpad-up"         data-key="ArrowUp">▲</button>
+  <button class="dpad-btn" id="dpad-upright"   data-key="v">↗</button>
+  <button class="dpad-btn" id="dpad-left"       data-key="ArrowLeft">◀</button>
   <button class="dpad-btn" id="dpad-center"></button>
-  <button class="dpad-btn" id="dpad-right" data-key="ArrowRight">▶</button>
-  <button class="dpad-btn" id="dpad-down"  data-key="ArrowDown">▼</button>
+  <button class="dpad-btn" id="dpad-right"      data-key="ArrowRight">▶</button>
+  <button class="dpad-btn" id="dpad-downleft"  data-key="x">↙</button>
+  <button class="dpad-btn" id="dpad-down"       data-key="ArrowDown">▼</button>
+  <button class="dpad-btn" id="dpad-downright" data-key="c">↘</button>
 </div>
 
 <div id="action-btns">
@@ -4206,6 +4290,12 @@ document.addEventListener('mousedown',  _unlockAudio, { once: true });
     btn.addEventListener('touchstart', e => { e.preventDefault(); fire(btn.dataset.key); }, { passive: false });
     btn.addEventListener('mousedown',  e => { e.preventDefault(); fire(btn.dataset.key); });
   });
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    document.getElementById('dpad').style.display = 'grid';
+    document.getElementById('action-btns').style.display = 'flex';
+    document.getElementById('mobile-log').style.display = 'block';
+  }
+  window.addEventListener('orientationchange', () => { setTimeout(() => Renderer.resize(), 200); });
 })();
 
 // ── SaveSystem ────────────────────────────────────────────────
@@ -4255,7 +4345,7 @@ const ScoreSystem = {
   clear() { try { localStorage.removeItem(this.KEY); } catch(e){} }
 };
 
-// ── Settings ─────────────────────────────────────────────────
+// ── Settings ───────────────────────────────────────────
 const Settings = {
   KEY: 'coe_settings_v1',
   volume: 70, soundOn: true,
@@ -4269,7 +4359,7 @@ const Settings = {
   save() { try { localStorage.setItem(this.KEY, JSON.stringify({volume:this.volume,soundOn:this.soundOn})); } catch(e){} },
 };
 
-// ── Character Classes ─────────────────────────────────────────
+// ── Character Classes ───────────────────────────────────────
 const CLASSES = [
   { id:'warrior', name:'Warrior', icon:'⚔',  desc:'Sturdy front-liner',       bonuses:{atk:3, def:2, maxHp:20},   color:'var(--red)'    },
   { id:'mage',    name:'Mage',    icon:'🔮', desc:'Arcane power, frail body',  bonuses:{maxMp:20, atk:-1},         startSkill:'fireball', color:'var(--blue)' },
@@ -4288,7 +4378,7 @@ function _applyClass(cls) {
   Logger.add('Class: ' + cls.icon + ' ' + cls.name + ' chosen!','skill');
 }
 
-// ── Prevent pinch-zoom and double-tap zoom ────────────────────
+// ── Prevent pinch-zoom and double-tap zoom ────────────────────────
 document.addEventListener('touchstart', e => {
   if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
@@ -4296,10 +4386,10 @@ document.addEventListener('touchend', e => {
   e.preventDefault();
 }, { passive: false });
 
-// ── Boot ──────────────────────────────────────────────────────
+// ── Boot ────────────────────────────────────────────────
 Game.init();
 
-// ── Continue run button ───────────────────────────────────────
+// ── Continue run button ─────────────────────────────────────────────
 (function checkSave() {
   const save = SaveSystem.load();
   if (!save) return;
