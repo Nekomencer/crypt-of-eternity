@@ -403,6 +403,33 @@
   * { touch-action: manipulation; }
   #dpad, #action-btns { touch-action: none; }
 
+  /* PAUSE OVERLAY */
+  #pause-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.75);
+    display:none; align-items:center; justify-content:center;
+    z-index:150; flex-direction:column; gap:20px;
+  }
+  #pause-overlay.active { display:flex; }
+  #pause-overlay h2 { font-size:20px; color:var(--gold); text-shadow:0 0 20px #f5c84288; }
+  #resume-btn { padding:12px 24px; border:2px solid var(--green); color:var(--green); background:none; font-family:var(--font-main); font-size:10px; cursor:pointer; }
+  #resume-btn:hover { background:#1a2a1a; }
+
+  /* MERCHANT TABS */
+  .merchant-tab {
+    flex:1; padding:8px; border:1px solid var(--border); background:none;
+    color:var(--dim); font-family:var(--font-main); font-size:7px; cursor:pointer;
+  }
+  .merchant-tab:first-child { border-right:none; }
+  .merchant-tab.active-tab { background:#1a1a24; color:var(--gold); border-bottom-color:#1a1a24; }
+
+  /* SETTINGS BUTTON on title */
+  #settings-btn {
+    padding:8px 18px; background:none;
+    border:1px solid var(--dim); color:var(--dim);
+    font-family:var(--font-main); font-size:8px; cursor:pointer;
+  }
+  #settings-btn:hover { border-color:var(--white); color:var(--white); }
+
   @media (max-width: 700px) {
     #dpad { display: grid; }
     #action-btns { display: flex; }
@@ -479,9 +506,13 @@
 <div id="title-screen">
   <h1>⚔ CRYPTS<br>OF ETERNITY</h1>
   <p>WASD/ARROWS · MOVE &nbsp;|&nbsp; SPACE · ATTACK<br>
-     1/2/3 · SKILLS &nbsp;|&nbsp; I · INVENTORY &nbsp;|&nbsp; E · INTERACT</p>
+     1/2/3 · SKILLS &nbsp;|&nbsp; I · INVENTORY &nbsp;|&nbsp; E · INTERACT<br>
+     Z/X/C/V · DIAGONAL MOVE &nbsp;|&nbsp; ESC · PAUSE</p>
   <button id="continue-btn" style="display:none">▶ CONTINUE RUN</button>
+  <button id="abandon-btn" style="display:none;padding:14px 28px;background:none;border:2px solid var(--red);color:var(--red);font-family:var(--font-main);font-size:10px;cursor:pointer">✕ ABANDON RUN</button>
   <button id="start-btn">▶ NEW GAME</button>
+  <button id="settings-btn">⚙ SETTINGS</button>
+  <div id="best-runs" style="font-size:7px;color:var(--dim);text-align:center;max-width:400px;line-height:2"></div>
 </div>
 
 <div id="game-container">
@@ -525,10 +556,12 @@
       </div>
       <div id="controls-hint">
         <span>WASD/↑↓←→ Move</span>
+        <span>Z/X/C/V Diagonal</span>
         <span>SPC Attack</span>
         <span>1/2/3 Skills</span>
         <span>I Inv</span>
         <span>E Talk</span>
+        <span>ESC Pause</span>
       </div>
     </div>
 
@@ -540,7 +573,7 @@
     </div>
   </div>
   <div id="bottom-bar">
-    <span>WASD/↑↓←→ MOVE &nbsp;·&nbsp; SPACE ATK &nbsp;·&nbsp; 1/2/3 SKILL &nbsp;·&nbsp; Q POTION<br>I INVENTORY &nbsp;·&nbsp; E INTERACT/DESCEND</span>
+    <span>WASD/↑↓←→ MOVE &nbsp;·&nbsp; Z/X/C/V DIAGONAL &nbsp;·&nbsp; SPACE ATK &nbsp;·&nbsp; 1/2/3 SKILL &nbsp;·&nbsp; Q POTION<br>I INVENTORY &nbsp;·&nbsp; E INTERACT/DESCEND &nbsp;·&nbsp; ESC PAUSE</span>
     <span id="gold-display">💰 0 GOLD</span>
   </div>
 </div>
@@ -560,7 +593,16 @@
 <div class="overlay" id="merchant-overlay">
   <div class="overlay-box">
     <div class="overlay-title">🏪 MERCHANT</div>
-    <div id="merchant-grid" class="merchant-grid"></div>
+    <div style="display:flex;gap:0;margin-bottom:12px">
+      <button id="tab-buy" class="merchant-tab active-tab">🛒 BUY</button>
+      <button id="tab-sell" class="merchant-tab">💰 SELL</button>
+    </div>
+    <div id="merchant-buy-panel">
+      <div id="merchant-grid" class="merchant-grid"></div>
+    </div>
+    <div id="merchant-sell-panel" style="display:none">
+      <div id="merchant-sell-grid" class="merchant-grid"></div>
+    </div>
     <div class="overlay-close">[ E ] TO CLOSE</div>
   </div>
 </div>
@@ -632,6 +674,36 @@
   <button class="action-btn" id="btn-skill3"   data-key="3">3</button>
   <button class="action-btn" id="btn-interact" data-key="e">E</button>
   <button class="action-btn" id="btn-attack"   data-key=" ">ATK</button>
+</div>
+
+<div id="pause-overlay">
+  <h2>⏸ PAUSED</h2>
+  <button id="resume-btn">▶ RESUME</button>
+</div>
+
+<div class="overlay" id="settings-overlay">
+  <div class="overlay-box">
+    <div class="overlay-title">⚙ SETTINGS</div>
+    <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
+      <label style="display:flex;align-items:center;gap:12px;font-size:8px">
+        MASTER VOLUME
+        <input type="range" id="vol-slider" min="0" max="100" value="70" style="flex:1">
+        <span id="vol-label">70</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:12px;font-size:8px">
+        SOUND
+        <button id="sound-toggle" style="padding:4px 12px;border:1px solid var(--border);background:none;color:var(--green);font-family:var(--font-main);font-size:8px;cursor:pointer">ON</button>
+      </label>
+      <button id="reset-scores-btn" style="padding:8px;border:1px solid var(--red);background:none;color:var(--red);font-family:var(--font-main);font-size:8px;cursor:pointer">🗑 RESET ALL SCORES</button>
+    </div>
+    <div class="overlay-close"><button id="settings-close-btn" style="padding:6px 12px;border:1px solid var(--border);background:none;color:var(--dim);font-family:var(--font-main);font-size:8px;cursor:pointer">✕ CLOSE</button></div>
+  </div>
+</div>
+
+<div id="class-screen" style="position:fixed;inset:0;background:#0c0a16;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:110;gap:24px">
+  <h2 style="font-size:14px;color:var(--gold)">CHOOSE YOUR CLASS</h2>
+  <div id="class-cards" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center"></div>
+  <button id="class-begin-btn" style="padding:12px 28px;border:2px solid var(--gold);color:var(--gold);background:none;font-family:var(--font-main);font-size:10px;cursor:pointer;display:none">▶ BEGIN</button>
 </div>
 
 <script>
@@ -2230,7 +2302,7 @@ const EntityManager = {
         def:  Math.round(def.def *(1+(floor-1)*0.10)),
         exp:  Math.round(def.exp *fm),
         gold: [Math.round(def.gold[0]*gm), Math.round(def.gold[1]*gm)],
-        alive:true});
+        alive:true, statusEffects:{frozen:0,burning:0,burnDmg:0}});
     }
     for(let i=0;i<numC;i++){ const p=place(); if(p) this.chests.push({x:p.x,y:p.y,opened:false}); }
     if(hasMerchant){ const p=place(); if(p) this.merchant={x:p.x,y:p.y}; }
@@ -2242,7 +2314,7 @@ const EntityManager = {
       const existIdx=this.enemies.findIndex(e=>e.x===bx&&e.y===by);
       if(existIdx>=0) this.enemies.splice(existIdx,1);
       const ld={...ENEMY_DEFS.lich};
-      this.enemies.push({...ld,id:this.enemies.length,x:bx,y:by,alive:true,maxHp:ld.hp});
+      this.enemies.push({...ld,id:this.enemies.length,x:bx,y:by,alive:true,maxHp:ld.hp,statusEffects:{frozen:0,burning:0,burnDmg:0}});
     }
 
     // Guarantee a health potion in the player's starting room on floor 1
@@ -2267,6 +2339,7 @@ const EntityManager = {
   moveEnemies(){
     for(const e of this.enemies){
       if(!e.alive) continue;
+      if(e.statusEffects?.frozen>0){ e.statusEffects.frozen--; continue; }
       const d=dist(e,Player);
       // Only chase if within sensing range and not already adjacent
       if(d>9||d===1) continue;
@@ -2293,6 +2366,7 @@ const EntityManager = {
     let hit=false;
     for(const e of this.enemies){
       if(!e.alive) continue;
+      if(e.statusEffects?.frozen>0) continue;
       // Must be exactly 1 step away
       if(dist(e,Player)!==1) continue;
       // Must be on the same row or same column (no diagonal attacks)
@@ -2363,7 +2437,7 @@ const CombatSystem = {
         Floaters.add(e.x,e.y,dmg,'#9b5de5');
         AnimSystem.hurtEnemy(e.id);
         GameState.stats.damageDealt+=dmg;
-        if(sid==='thunderstrike') FXSystem.spawn('lightning',e.x,e.y,'#ffee44');
+        if(sid==='thunderstrike'){ FXSystem.spawn('lightning',e.x,e.y,'#ffee44'); e.statusEffects=e.statusEffects||{frozen:0,burning:0,burnDmg:0}; e.statusEffects.frozen=1; }
         else if(sid==='spiritwave') FXSystem.spawn('burst',e.x,e.y,'#44aaff');
         if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} defeated!`,'loot'); this._drop(e); }
         hits++;
@@ -2383,16 +2457,20 @@ const CombatSystem = {
       else if(sid==='slash') FXSystem.spawn('hit',t.x,t.y,'#c8c8c8');
       if(sid==='vampiricblow'){ const h=Math.floor(dmg*0.5); Player.heal(h); Logger.add(`Drained ${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
       if(sid==='soul_drain'){ const h=Math.floor(dmg*(def.lifesteal||0.4)); Player.heal(h); Logger.add(`Soul Drain: +${h} HP!`,'heal'); Floaters.add(Player.x,Player.y,'+'+h,'#52b788'); }
+      if(sid==='icebolt'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0}; t.statusEffects.frozen=2; Logger.add(`${t.name} is FROZEN!`,'info'); }
+      if(sid==='fireball'){ t.statusEffects=t.statusEffects||{frozen:0,burning:0,burnDmg:0}; t.statusEffects.burning=3; t.statusEffects.burnDmg=Math.floor(dmg*0.2)||1; Logger.add(`${t.name} is BURNING!`,'warn'); }
       if(t.hp<=0){ t.alive=false; t.deathFlash=8; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(t.exp); Player.gainGold(rng(...t.gold)); Logger.add(`${t.name} defeated!`,'loot'); this._drop(t); }
     }
     return true;
   },
 
   _drop(enemy){
-    // Lich boss always drops Soul Drain tome
+    // Lich boss always drops Soul Drain tome and spawns exit
     if(enemy.type==='lich'){
       Player.addItem({type:'book',name:'Soul Drain Tome',icon:'📕',skill:'soul_drain',baseVal:200},'epic');
       Logger.add('The Lich drops Soul Drain!','skill');
+      const ep=MapGen.randomFloorInRoom(MapGen.rooms);
+      if(ep){ MapGen.tiles[ep.y][ep.x]=T.EXIT; Logger.add('✨ An exit portal shimmers into existence!','skill'); }
     }
     const floor=GameState.floor;
     // Drop chance: 35% on floor 1, rising to 55% by floor 5+
@@ -2452,7 +2530,7 @@ const CombatSystem = {
 // ============================================================
 const GameState = {
   state:'EXPLORE', floor:1, turnCount:0, selectedInvIdx:-1, onStairs:false,
-  hitFreezeUntil:0,
+  hitFreezeUntil:0, isPaused:false,
   stats:{ floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 },
   setFloor(n){ this.floor=n; document.getElementById('floor-info').textContent=`FLOOR ${n}`; },
 };
@@ -3234,6 +3312,9 @@ const Renderer = {
       ctx.fillStyle='#1a0000'; ctx.fillRect(bx,by,bw,3);
       ctx.fillStyle=ratio>0.5?PAL.hpHigh:ratio>0.25?PAL.hpMid:PAL.hpLow;
       ctx.fillRect(bx,by,Math.floor(bw*ratio),3);
+      // Status effect icons
+      if(e.statusEffects?.frozen>0){ ctx.font=`${Math.floor(TS*0.45)}px serif`; ctx.textAlign='center'; ctx.fillText('🧊',esx+TS-8,esy+10); }
+      else if(e.statusEffects?.burning>0){ ctx.font=`${Math.floor(TS*0.45)}px serif`; ctx.textAlign='center'; ctx.fillText('🔥',esx+TS-8,esy+10); }
       if(dist(e,Player)===1){
         ctx.save(); ctx.globalAlpha=pulse; ctx.fillStyle='#ff3333';
         ctx.font=`bold ${Math.floor(TS*0.5)}px monospace`;
@@ -3478,10 +3559,34 @@ const UIManager = {
       if(can) div.onclick=()=>MerchantSystem.buy(i);
       grid.appendChild(div);
     }
+    this.renderMerchantSell();
+  },
+  renderMerchantSell(){
+    const grid=document.getElementById('merchant-sell-grid');
+    if(!grid) return;
+    grid.innerHTML=`<p style="font-size:8px;color:var(--dim);margin-bottom:4px;">Sell items for 60% of their value.</p>`;
+    if(!Player.inventory.length){
+      grid.innerHTML+=`<p style="font-size:8px;color:var(--dim);">Nothing to sell.</p>`; return;
+    }
+    Player.inventory.forEach((entry,i)=>{
+      const item=entry.item, val=Math.floor((item.baseVal||20)*0.6);
+      const div=document.createElement('div'); div.className='merchant-item';
+      div.innerHTML=`<div class="merchant-icon">${item.icon}</div>
+        <div class="merchant-info"><div class="merchant-name" style="color:${RARITY_COLOR[entry.rarity]||'#aaa'}">${item.name}</div>
+        <div class="merchant-stat">${item.type.toUpperCase()}</div></div>
+        <div class="merchant-price">${val}g</div>`;
+      div.onclick=()=>{
+        Player.gainGold(val); Player.removeItem(i);
+        Logger.add(`Sold ${item.name} for ${val}g`,'gold');
+        UIManager.renderMerchant(); UIManager.updateGold();
+      };
+      grid.appendChild(div);
+    });
   },
   showGameOver(){
     GameState.state='GAME_OVER';
     SaveSystem.clear();
+    ScoreSystem.save('died');
     const s=GameState.stats;
     document.getElementById('death-stats').innerHTML=
       `<div>Floor reached: ${GameState.floor}</div>`+
@@ -3493,6 +3598,7 @@ const UIManager = {
   },
   showVictory(){
     GameState.state='GAME_OVER';
+    ScoreSystem.save('escaped');
     const s=GameState.stats;
     document.getElementById('victory-stats').innerHTML=
       `<div>Floor reached: ${GameState.floor}</div>`+
@@ -3524,18 +3630,28 @@ const InputHandler = {
   onKey(e){
     if(GameState.state==='GAME_OVER'||GameState.state==='BATTLE'&&BattleSystem._busy) return;
     if(!Audio.enabled){ Audio.enabled=true; AmbientMusic.start(GameState.floor); }
-    const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' '];
+    const gk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','1','2','3','i','I','e','E','q','Q',' ','z','Z','x','X','c','C','v','V','Escape'];
     if(gk.includes(e.key)) e.preventDefault();
-    const now=Date.now(); if(now<this.lockUntil) return; this.lockUntil=now+160;
     const k=e.key;
+    if(k==='Escape'){
+      GameState.isPaused=!GameState.isPaused;
+      const po=document.getElementById('pause-overlay');
+      if(po) po.classList.toggle('active',GameState.isPaused);
+      if(!GameState.isPaused) DustParticles.startLoop();
+      return;
+    }
+    const now=Date.now(); if(now<this.lockUntil) return; this.lockUntil=now+160;
     if(k==='i'||k==='I'){ GameState.state==='INVENTORY'?UIManager.closeInventory():GameState.state==='EXPLORE'&&UIManager.openInventory(); return; }
     if(GameState.state==='INVENTORY') return;
     if(GameState.state==='BATTLE'){ BattleSystem.onKey(k); return; }
     if(GameState.state==='MERCHANT'){ if(k==='e'||k==='E') UIManager.closeMerchant(); return; }
     if(GameState.state!=='EXPLORE') return;
+    if(GameState.isPaused) return;
     const dirs={'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0},
                 'w':{x:0,y:-1},'s':{x:0,y:1},'a':{x:-1,y:0},'d':{x:1,y:0},
-                'W':{x:0,y:-1},'S':{x:0,y:1},'A':{x:-1,y:0},'D':{x:1,y:0}};
+                'W':{x:0,y:-1},'S':{x:0,y:1},'A':{x:-1,y:0},'D':{x:1,y:0},
+                'z':{x:-1,y:-1},'Z':{x:-1,y:-1},'x':{x:-1,y:1},'X':{x:-1,y:1},
+                'c':{x:1,y:1},'C':{x:1,y:1},'v':{x:1,y:-1},'V':{x:1,y:-1}};
     if(dirs[k]){
       clearTimeout(this._holdTimer);
       this._holdKey=k;
@@ -3567,17 +3683,73 @@ const Game = {
     document.getElementById('start-btn').onclick=()=>this.startGame();
     document.getElementById('restart-btn').onclick=()=>this.startGame();
     document.getElementById('victory-btn').onclick=()=>this.startGame();
+    Settings.load();
+    // Best runs display
+    const br=document.getElementById('best-runs');
+    if(br){ const scores=ScoreSystem.load().slice(0,5); if(scores.length){ br.innerHTML='<span style="color:var(--gold)">🏆 TOP RUNS</span><br>'+scores.map((s,i)=>`${i+1}. ${s.score}pts · Flr${s.floor} · Lv${s.level} · ${s.outcome} · ${s.date}`).join('<br>'); } }
+    // Settings panel wiring
+    const sBtn=document.getElementById('settings-btn');
+    if(sBtn){ sBtn.onclick=()=>document.getElementById('settings-overlay').classList.add('active'); }
+    const sClose=document.getElementById('settings-close-btn');
+    if(sClose){ sClose.onclick=()=>document.getElementById('settings-overlay').classList.remove('active'); }
+    const volSlider=document.getElementById('vol-slider');
+    const volLabel=document.getElementById('vol-label');
+    if(volSlider){ volSlider.value=Settings.volume; if(volLabel) volLabel.textContent=Settings.volume; volSlider.oninput=()=>{ Settings.volume=+volSlider.value; if(volLabel) volLabel.textContent=Settings.volume; if(AmbientMusic.masterGain) AmbientMusic.masterGain.gain.value=(Settings.volume/100)*0.18; Settings.save(); }; }
+    const soundToggle=document.getElementById('sound-toggle');
+    if(soundToggle){ soundToggle.textContent=Settings.soundOn?'ON':'OFF'; soundToggle.onclick=()=>{ Settings.soundOn=!Settings.soundOn; soundToggle.textContent=Settings.soundOn?'ON':'OFF'; Audio.enabled=Settings.soundOn; if(AmbientMusic.masterGain) AmbientMusic.masterGain.gain.value=Settings.soundOn?(Settings.volume/100)*0.18:0; Settings.save(); }; }
+    const resetScores=document.getElementById('reset-scores-btn');
+    if(resetScores){ resetScores.onclick=()=>{ ScoreSystem.clear(); if(br) br.innerHTML=''; }; }
+    // Pause overlay resume button
+    const resumeBtn=document.getElementById('resume-btn');
+    if(resumeBtn){ resumeBtn.onclick=()=>{ GameState.isPaused=false; document.getElementById('pause-overlay').classList.remove('active'); DustParticles.startLoop(); }; }
+    // Merchant tab buttons
+    const tabBuy=document.getElementById('tab-buy'), tabSell=document.getElementById('tab-sell');
+    const buyPanel=document.getElementById('merchant-buy-panel'), sellPanel=document.getElementById('merchant-sell-panel');
+    if(tabBuy&&tabSell){
+      tabBuy.onclick=()=>{ tabBuy.classList.add('active-tab'); tabSell.classList.remove('active-tab'); buyPanel.style.display=''; sellPanel.style.display='none'; };
+      tabSell.onclick=()=>{ tabSell.classList.add('active-tab'); tabBuy.classList.remove('active-tab'); sellPanel.style.display=''; buyPanel.style.display='none'; UIManager.renderMerchantSell(); };
+    }
   },
 
   startGame(){
-    GameState.state='EXPLORE'; GameState.floor=0; GameState.turnCount=0;
+    document.getElementById('title-screen').style.display='none';
+    document.getElementById('game-over-screen').classList.remove('active');
+    _selectedClass=null;
+    const classScreen=document.getElementById('class-screen');
+    if(classScreen){
+      classScreen.style.display='flex';
+      const cards=document.getElementById('class-cards');
+      cards.innerHTML='';
+      CLASSES.forEach(cls=>{
+        const card=document.createElement('div');
+        card.style.cssText=`border:2px solid ${cls.color};padding:16px;cursor:pointer;background:none;color:${cls.color};font-family:var(--font-main);font-size:8px;text-align:center;width:130px;line-height:2;transition:opacity 0.1s;`;
+        card.innerHTML=`<div style="font-size:28px">${cls.icon}</div><div>${cls.name}</div><div style="font-size:7px;color:var(--dim);margin-top:4px">${cls.desc}</div>`;
+        card.onclick=()=>{
+          _selectedClass=cls;
+          Array.from(cards.children).forEach(c=>c.style.opacity='0.5');
+          card.style.opacity='1'; card.style.background=cls.color+'22';
+          const bBtn=document.getElementById('class-begin-btn');
+          if(bBtn) bBtn.style.display='inline-block';
+        };
+        cards.appendChild(card);
+      });
+      const beginBtn=document.getElementById('class-begin-btn');
+      if(beginBtn){ beginBtn.style.display='none'; beginBtn.onclick=()=>this._doStartGame(); }
+    } else {
+      this._doStartGame();
+    }
+  },
+
+  _doStartGame(){
+    const classScreen=document.getElementById('class-screen');
+    if(classScreen) classScreen.style.display='none';
+    GameState.state='EXPLORE'; GameState.floor=0; GameState.turnCount=0; GameState.isPaused=false;
     GameState.selectedInvIdx=-1; GameState.onStairs=false; InputHandler.lockUntil=0;
     MerchantSystem.generatedFloor=-1;
-    document.getElementById('title-screen').style.display='none';
     document.getElementById('game-container').classList.add('active');
-    document.getElementById('game-over-screen').classList.remove('active');
     UIManager.closeAllOverlays();
     Player.reset(); Logger.clear();
+    if(_selectedClass) _applyClass(_selectedClass);
     SaveSystem.clear();
     GameState.stats = { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
     Logger.add('Welcome to the Crypts of Eternity!','info');
@@ -3601,11 +3773,6 @@ const Game = {
     GameState.onStairs=false;
     EntityManager.spawnFloor(newFloor,rooms);
     SaveSystem.save();
-    // On floor MAX_FLOOR, replace stairs with exit portal
-    if(newFloor===MAX_FLOOR){
-      const last=rooms[rooms.length-1];
-      MapGen.tiles[last.cy][last.cx]=T.EXIT;
-    }
     AnimSystem.snap();
     TorchSystem.generate();
     FogOfWar.init();
@@ -3616,7 +3783,7 @@ const Game = {
     UIManager.updateAll(); Renderer.draw();
     // Floor announce overlay
     const ann=document.getElementById('floor-announce');
-    ann.textContent=newFloor===MAX_FLOOR?'FLOOR 10 — FINAL FLOOR':`FLOOR ${newFloor}`;
+    ann.textContent=newFloor===MAX_FLOOR?'⚠ A DARK PRESENCE STIRS...':`FLOOR ${newFloor}`;
     ann.classList.add('active');
     setTimeout(()=>{
       ann.style.transition='opacity 1.2s';
@@ -3681,7 +3848,17 @@ const Game = {
       setTimeout(()=>this.endTurn(),16);
       return;
     }
+    if(GameState.isPaused) return;
     GameState.turnCount++;
+    // Apply burning DoT
+    for(const e of EntityManager.enemies){
+      if(!e.alive||!e.statusEffects?.burning) continue;
+      const bDmg=e.statusEffects.burnDmg||1;
+      e.hp-=bDmg;
+      e.statusEffects.burning--;
+      Floaters.add(e.x,e.y,bDmg,'#ff6600');
+      if(e.hp<=0){ e.alive=false; e.deathFlash=8; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} burned to death!`,'warn'); CombatSystem._drop(e); }
+    }
     if(GameState.state!=='BATTLE'){
       EntityManager.moveEnemies();
       EntityManager.attackAdjacent();
@@ -3802,7 +3979,6 @@ const AmbientMusic = {
 
   setFloor(floor){
     this.floor=floor;
-    // Stop current drones; new drone with lower pitch spawns next _scheduleArp cycle
     for(const o of this._droneOscs){ try{ o.stop(); }catch(e){} }
     this._droneOscs=[];
     if(this.running){ this._startDrone(); }
@@ -3904,7 +4080,6 @@ const BattleMusic = {
   },
 
   _playStep(ac, mg, when, step) {
-    // kick: steps 0, 4, 8, 12
     if (step % 4 === 0) {
       const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.18), ac.sampleRate);
       const d = buf.getChannelData(0);
@@ -3914,7 +4089,6 @@ const BattleMusic = {
       const eg = ac.createGain(); eg.gain.setValueAtTime(1.5, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
       src.connect(lp); lp.connect(eg); eg.connect(mg); src.start(when);
     }
-    // snare: steps 4, 12
     if (step === 4 || step === 12) {
       const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.12), ac.sampleRate);
       const d = buf.getChannelData(0);
@@ -3924,7 +4098,6 @@ const BattleMusic = {
       const eg = ac.createGain(); eg.gain.setValueAtTime(1.0, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.12);
       src.connect(bp); bp.connect(eg); eg.connect(mg); src.start(when);
     }
-    // hi-hat: every even step
     if (step % 2 === 0) {
       const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.04), ac.sampleRate);
       const d = buf.getChannelData(0);
@@ -3934,7 +4107,6 @@ const BattleMusic = {
       const eg = ac.createGain(); eg.gain.setValueAtTime(0.35, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.04);
       src.connect(hp); hp.connect(eg); eg.connect(mg); src.start(when);
     }
-    // bass sawtooth — E minor pattern
     const bassNotes = [41.2, 41.2, 49.0, 41.2, 36.7, 41.2, 43.7, 41.2, 41.2, 49.0, 41.2, 55.0, 41.2, 49.0, 43.7, 41.2];
     if (step % 2 === 0) {
       const osc = ac.createOscillator(); osc.type = 'sawtooth';
@@ -3943,7 +4115,6 @@ const BattleMusic = {
       const eg = ac.createGain(); eg.gain.setValueAtTime(0.45, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
       osc.connect(lp); lp.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.30);
     }
-    // melody arpeggio (triangle) — every 3 steps
     if (step % 3 === 0) {
       const melNotes = [164.8, 196.0, 220.0, 196.0, 174.6, 196.0, 164.8, 220.0, 246.9, 220.0, 196.0, 164.8, 220.0, 246.9, 261.6, 246.9];
       const osc = ac.createOscillator(); osc.type = 'triangle';
@@ -3951,7 +4122,6 @@ const BattleMusic = {
       const eg = ac.createGain(); eg.gain.setValueAtTime(0.20, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.22);
       osc.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.24);
     }
-    // chord pad (sine) on beats 0 and 8
     if (step === 0 || step === 8) {
       const chords = step === 0 ? [82.4, 98.0, 123.5] : [73.4, 98.0, 110.0];
       for (const freq of chords) {
@@ -4002,7 +4172,7 @@ const DustParticles = {
     if(this.running) return;
     this.running=true;
     const tick=()=>{
-      if(GameState.state!=='EXPLORE'){ this.running=false; return; }
+      if(GameState.state!=='EXPLORE'||GameState.isPaused){ this.running=false; return; }
       Renderer.draw();
       requestAnimationFrame(tick);
     };
@@ -4056,13 +4226,67 @@ const SaveSystem = {
           inventory: JSON.parse(JSON.stringify(Player.inventory)),
         }
       }));
-    } catch(e) { /* storage full or private mode */ }
+    } catch(e) {}
   },
   load() {
     try { const r=localStorage.getItem(this.KEY); return r?JSON.parse(r):null; } catch(e){ return null; }
   },
   clear() { try { localStorage.removeItem(this.KEY); } catch(e){} }
 };
+
+// ── ScoreSystem ───────────────────────────────────────────────
+const ScoreSystem = {
+  KEY: 'coe_scores_v1',
+  calc(outcome) {
+    return Player.gold * 10 + Player.level * 100 + GameState.floor * 50 + (outcome==='escaped' ? 1000 : 0);
+  },
+  save(outcome) {
+    const scores = this.load();
+    scores.push({
+      score: this.calc(outcome),
+      floor: GameState.floor, level: Player.level, gold: Player.gold,
+      turns: GameState.turnCount, outcome,
+      date: new Date().toLocaleDateString()
+    });
+    scores.sort((a,b)=>b.score-a.score);
+    try { localStorage.setItem(this.KEY, JSON.stringify(scores.slice(0,10))); } catch(e) {}
+  },
+  load() { try { return JSON.parse(localStorage.getItem(this.KEY)||'[]'); } catch(e){ return []; } },
+  clear() { try { localStorage.removeItem(this.KEY); } catch(e){} }
+};
+
+// ── Settings ─────────────────────────────────────────────────
+const Settings = {
+  KEY: 'coe_settings_v1',
+  volume: 70, soundOn: true,
+  load() {
+    try {
+      const s=JSON.parse(localStorage.getItem(this.KEY)||'{}');
+      if(typeof s.volume==='number') this.volume=s.volume;
+      if(typeof s.soundOn==='boolean') this.soundOn=s.soundOn;
+    } catch(e){}
+  },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify({volume:this.volume,soundOn:this.soundOn})); } catch(e){} },
+};
+
+// ── Character Classes ─────────────────────────────────────────
+const CLASSES = [
+  { id:'warrior', name:'Warrior', icon:'⚔',  desc:'Sturdy front-liner',       bonuses:{atk:3, def:2, maxHp:20},   color:'var(--red)'    },
+  { id:'mage',    name:'Mage',    icon:'🔮', desc:'Arcane power, frail body',  bonuses:{maxMp:20, atk:-1},         startSkill:'fireball', color:'var(--blue)' },
+  { id:'rogue',   name:'Rogue',   icon:'🗡', desc:'Fast and lethal',           bonuses:{atk:1, maxHp:-10},         startSkill:'shadowstep', color:'var(--purple)' },
+];
+let _selectedClass = null;
+
+function _applyClass(cls) {
+  if(!cls) return;
+  const b=cls.bonuses;
+  if(b.atk)   Player.atk   += b.atk;
+  if(b.def)   Player.def   += b.def;
+  if(b.maxHp) { Player.maxHp += b.maxHp; Player.hp = Player.totalMaxHp; }
+  if(b.maxMp) { Player.maxMp += b.maxMp; Player.mp = Player.maxMp; }
+  if(cls.startSkill) Player.learnSkill(cls.startSkill);
+  Logger.add('Class: ' + cls.icon + ' ' + cls.name + ' chosen!','skill');
+}
 
 // ── Prevent pinch-zoom and double-tap zoom ────────────────────
 document.addEventListener('touchstart', e => {
@@ -4082,8 +4306,16 @@ Game.init();
   const btn = document.getElementById('continue-btn');
   if (!btn) return;
   btn.style.display = 'inline-block';
+  const abandonBtn = document.getElementById('abandon-btn');
+  if(abandonBtn){
+    abandonBtn.style.display = 'inline-block';
+    abandonBtn.onclick = () => {
+      SaveSystem.clear();
+      btn.style.display = 'none';
+      abandonBtn.style.display = 'none';
+    };
+  }
   btn.onclick = () => {
-    // Restore game state from save
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('game-container').classList.add('active');
     document.getElementById('game-over-screen').classList.remove('active');
@@ -4100,8 +4332,9 @@ Game.init();
       inventory: p.inventory,
     });
     GameState.stats = save.stats || { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
+    GameState.isPaused = false;
     Logger.clear();
-    Logger.add(`Welcome back! Resuming from floor ${save.floor}.`, 'info');
+    Logger.add('Welcome back! Resuming from floor ' + save.floor + '.', 'info');
     requestAnimationFrame(() => { Renderer.resize(); Game.nextFloor(save.floor); });
   };
 })();
