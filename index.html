@@ -251,7 +251,7 @@
   #battle-bg-canvas { position:absolute; inset:0; z-index:0; width:100%; height:100%; }
 
   #battle-enemy-area {
-    position:absolute; top:8%; right:10%; z-index:1;
+    position:absolute; top:5%; right:3%; z-index:1; max-width:600px;
     display:flex; flex-direction:column; align-items:center; gap:8px;
   }
   #battle-enemy-name { font-size:11px; color:var(--white); letter-spacing:2px; text-align:center; }
@@ -259,6 +259,9 @@
     image-rendering:pixelated; width:256px; height:256px;
     background:#0a0818; border:2px solid var(--border);
   }
+  #battle-enemy-panels { display:flex; flex-direction:row; gap:8px; align-items:flex-end; justify-content:center; }
+  .battle-enemy-panel { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .battle-track.med { width:90px; height:7px; }
 
   #battle-player-area {
     position:absolute; bottom:26%; left:8%; z-index:1;
@@ -954,14 +957,14 @@ const TorchSystem = {
 
 // ── SKILL DEFINITIONS ─────────────────────────────────────────
 const SKILL_DEFS = {
-  slash:         {id:'slash',         name:'Slash',       icon:'⚔', manaCost:2, range:1,aoe:false,dmgMul:1.3,desc:'A quick sword strike. 130% ATK.'},
-  fireball:      {id:'fireball',      name:'Fireball',    icon:'🔥',manaCost:15,range:4,aoe:false,dmgMul:2.2,desc:'Hurl fireball at enemy within 4 tiles.'},
-  icebolt:       {id:'icebolt',       name:'Ice Bolt',    icon:'❄', manaCost:12,range:3,aoe:false,dmgMul:1.8,desc:'Freeze an enemy, moderate damage.'},
-  thunderstrike: {id:'thunderstrike', name:'Thunder',     icon:'⚡',manaCost:20,range:2,aoe:true, dmgMul:1.5,desc:'Lightning hits all enemies in range.'},
-  shadowstep:    {id:'shadowstep',    name:'Shadow Step', icon:'🌑',manaCost:18,range:5,aoe:false,dmgMul:0,  desc:'Teleport to a random floor tile.'},
-  vampiricblow:  {id:'vampiricblow',  name:'Vampiric',    icon:'🩸',manaCost:22,range:1,aoe:false,dmgMul:1.6,desc:'Strike enemy, heal 50% of damage.'},
-  spiritwave:    {id:'spiritwave',    name:'Spirit Wave', icon:'🌊',manaCost:25,range:3,aoe:true, dmgMul:2.0,desc:'Push spirit energy forward.'},
-  soul_drain:    {id:'soul_drain',    name:'Soul Drain',  icon:'💀',manaCost:8, range:1,aoe:false,dmgMul:1.4,lifesteal:0.4,desc:'Drain 40% of damage dealt as HP.'},
+  slash:         {id:'slash',         name:'Slash',       icon:'⚔', manaCost:2, range:1,aoe:false,dmgMul:1.3,skillType:'damage',desc:'A quick sword strike. 130% ATK.'},
+  fireball:      {id:'fireball',      name:'Fireball',    icon:'🔥',manaCost:15,range:4,aoe:false,dmgMul:2.2,skillType:'damage',desc:'Hurl fireball at enemy within 4 tiles.'},
+  icebolt:       {id:'icebolt',       name:'Ice Bolt',    icon:'❄', manaCost:12,range:3,aoe:false,dmgMul:1.8,skillType:'damage',desc:'Freeze an enemy, moderate damage.'},
+  thunderstrike: {id:'thunderstrike', name:'Thunder',     icon:'⚡',manaCost:20,range:2,aoe:true, dmgMul:1.5,skillType:'damage',desc:'Lightning hits all enemies in range.'},
+  shadowstep:    {id:'shadowstep',    name:'Shadow Step', icon:'🌑',manaCost:18,range:5,aoe:false,dmgMul:0,  skillType:'movement',desc:'Teleport to a random floor tile.'},
+  vampiricblow:  {id:'vampiricblow',  name:'Vampiric',    icon:'🩸',manaCost:22,range:1,aoe:false,dmgMul:1.6,skillType:'damage',desc:'Strike enemy, heal 50% of damage.'},
+  spiritwave:    {id:'spiritwave',    name:'Spirit Wave', icon:'🌊',manaCost:25,range:3,aoe:true, dmgMul:2.0,skillType:'damage',desc:'Push spirit energy forward.'},
+  soul_drain:    {id:'soul_drain',    name:'Soul Drain',  icon:'💀',manaCost:8, range:1,aoe:false,dmgMul:1.4,lifesteal:0.4,skillType:'damage',desc:'Drain 40% of damage dealt as HP.'},
 };
 
 // ── ITEMS ─────────────────────────────────────────────────────
@@ -2446,22 +2449,20 @@ const EntityManager = {
   //   2. They share the same row (y) OR same column (x) with the player
   //      — i.e. they are cardinally aligned, never diagonally.
   // This gives the player room to manoeuvre around enemies diagonally.
-  attackAdjacent(){
-    let hit=false;
+  checkAmbush(){
+    if(GameState.state==='BATTLE') return;
+    if(performance.now()-(GameState.lastBattleEnd||0)<600) return;
     for(const e of this.enemies){
       if(!e.alive) continue;
       if(e.statusEffects?.frozen>0) continue;
-      // Must be exactly 1 step away
       if(dist(e,Player)!==1) continue;
-      // Must be on the same row or same column (no diagonal attacks)
       const sameRow=(e.y===Player.y), sameCol=(e.x===Player.x);
       if(!sameRow&&!sameCol) continue;
-      const dmg=Player.takeDamage(e.atk);
-      Logger.add(`${e.name} hits you for ${dmg}!`,'dmg');
-      Floaters.add(Player.x,Player.y,dmg,'#e8e8f0');
-      Camera.shake(4); triggerHitStop(70); hit=true;
+      Logger.add(`${e.name} ambushes you!`,'dmg');
+      Camera.shake(3);
+      BattleSystem.engage(e,{ambush:true});
+      return;
     }
-    if(hit) flashScreen();
   },
 };
 
@@ -2511,7 +2512,7 @@ const CombatSystem = {
     }
 
     const candidates = GameState.state==='BATTLE'
-      ? (BattleSystem.enemy&&BattleSystem.enemy.alive ? [BattleSystem.enemy] : [])
+      ? (BattleSystem._aliveEnemies())
       : EntityManager.enemies.filter(e=>e.alive&&dist(e,Player)<=def.range);
     let hits=0;
     if(def.aoe){
@@ -2616,6 +2617,7 @@ const GameState = {
   state:'EXPLORE', floor:1, turnCount:0, selectedInvIdx:-1, onStairs:false,
   hitFreezeUntil:0, isPaused:false,
   stats:{ floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 },
+  lastBattleEnd:0,
   setFloor(n){ this.floor=n; document.getElementById('floor-info').textContent=`FLOOR ${n}`; },
 };
 
@@ -2910,22 +2912,40 @@ const BattleRenderer = {
 //  BattleSystem — Pokémon/Persona-style turn-based combat
 // ============================================================
 const BattleSystem = {
-  enemy: null,
+  enemies: [],
+  ambush: false,
   _busy: false,
   _cursor: 0,
   _phase: 'menu',
   _logCb: null,
   _logTimer: null,
-  _enemyHurt: 0,
+  _hurtTimers: {},
   _playerHurt: 0,
   _playerSwing: 0,
   _fleeCooldown: 0,
 
-  engage(e) {
-    this.enemy = e;
+  get enemy() { return this._firstAlive(); },
+  _aliveEnemies() { return this.enemies.filter(e => e.alive); },
+  _firstAlive()   { return this.enemies.find(e => e.alive) || null; },
+
+  engage(primaryEnemy, options = {}) {
+    const pool = EntityManager.enemies.filter(e =>
+      e.alive && e !== primaryEnemy && dist(e, Player) <= 3
+    );
+    let size = 1;
+    if (pool.length >= 1 && Math.random() < 0.38) size++;
+    if (pool.length >= 2 && Math.random() < 0.18) size++;
+    size = Math.min(size, pool.length + 1, 3);
+
+    this.enemies = [primaryEnemy];
+    for (let i = 0; i < size - 1; i++) this.enemies.push(pool[i]);
+
+    this.ambush = options.ambush || false;
     this._busy = false; this._cursor = 0;
     this._phase = 'menu'; this._logCb = null; this._fleeCooldown = 0;
+    this._hurtTimers = {};
     clearTimeout(this._logTimer);
+
     const tr = document.getElementById('battle-transition');
     tr.classList.add('fade-in');
     setTimeout(() => {
@@ -2933,10 +2953,48 @@ const BattleSystem = {
       BattleRenderer.startLoop();
       BattleMusic.start();
       document.getElementById('battle-screen').classList.add('active');
-      this._updateUI(); this._renderSprites();
-      this._log(`A ${e.name} appears!`, () => this._showMenu());
+      this._buildEnemyUI();
+      this._updateUI();
+      this._renderAllSprites();
+
+      const names = this.enemies.map(e => e.name).join(', ');
+      const groupTxt = this.enemies.length > 1
+        ? `Group encounter: ${names}!`
+        : `A ${primaryEnemy.name} appears!`;
+      const openMsg = this.ambush ? `☠ AMBUSH! ${groupTxt}` : groupTxt;
+
+      if (this.ambush) {
+        this._log(openMsg, () => this._enemyTurn(), '#ff4444');
+      } else {
+        this._log(openMsg, () => this._showMenu());
+      }
       tr.classList.remove('fade-in');
     }, 350);
+  },
+
+  _buildEnemyUI() {
+    const area = document.getElementById('battle-enemy-area');
+    area.innerHTML = '';
+    const count = this.enemies.length;
+    const panels = document.createElement('div');
+    panels.id = 'battle-enemy-panels';
+    this.enemies.forEach((e, i) => {
+      const sz = count === 1 ? 256 : count === 2 ? 160 : 112;
+      const nSz = count === 1 ? '11' : '9';
+      const trkCls = count === 1 ? 'battle-track wide' : 'battle-track med';
+      const panel = document.createElement('div');
+      panel.id = `battle-enemy-panel-${i}`;
+      panel.className = 'battle-enemy-panel';
+      panel.innerHTML =
+        `<div id="ben${i}" style="font-size:${nSz}px;color:var(--white);letter-spacing:1px;text-align:center">${e.name.toUpperCase()}</div>` +
+        `<div class="battle-stat-row"><span class="battle-bar-lbl">HP</span>` +
+        `<div class="${trkCls}"><div id="ehb${i}" class="battle-fill" style="width:100%"></div></div>` +
+        `<span id="eht${i}" class="battle-num">${e.hp}/${e.maxHp}</span></div>` +
+        `<canvas id="bec${i}" width="${sz}" height="${sz}" ` +
+        `style="image-rendering:pixelated;width:${sz}px;height:${sz}px;background:#0a0818;border:2px solid var(--border)"></canvas>`;
+      panels.appendChild(panel);
+    });
+    area.appendChild(panels);
   },
 
   _showMenu() {
@@ -2958,78 +3016,99 @@ const BattleSystem = {
   },
 
   _updateUI() {
-    const e = this.enemy; if (!e) return;
-    document.getElementById('battle-enemy-name').textContent = e.name.toUpperCase();
-    const er = clamp(e.hp / e.maxHp, 0, 1);
-    const eb = document.getElementById('enemy-hp-bar');
-    eb.style.width = (er*100)+'%';
-    eb.style.background = er>0.5 ? PAL.hpHigh : er>0.25 ? PAL.hpMid : PAL.hpLow;
-    document.getElementById('enemy-hp-text').textContent = `${Math.max(0,e.hp)}/${e.maxHp}`;
+    this.enemies.forEach((e, i) => {
+      const bar = document.getElementById('ehb'+i);
+      const txt = document.getElementById('eht'+i);
+      const panel = document.getElementById('battle-enemy-panel-'+i);
+      if (!bar) return;
+      const r = clamp(e.hp / e.maxHp, 0, 1);
+      bar.style.width = (r * 100) + '%';
+      bar.style.background = r > 0.5 ? PAL.hpHigh : r > 0.25 ? PAL.hpMid : PAL.hpLow;
+      if (txt) txt.textContent = Math.max(0, e.hp) + '/' + e.maxHp;
+      if (panel) panel.style.opacity = e.alive ? '1' : '0.35';
+    });
     const pr = clamp(Player.hp / Player.totalMaxHp, 0, 1);
     const pb = document.getElementById('player-battle-hp-bar');
-    pb.style.width = (pr*100)+'%';
-    pb.style.background = pr>0.5 ? PAL.hpHigh : pr>0.25 ? PAL.hpMid : PAL.hpLow;
-    document.getElementById('player-battle-hp-text').textContent = `${Player.hp}/${Player.totalMaxHp}`;
+    if (pb) { pb.style.width=(pr*100)+'%'; pb.style.background=pr>0.5?PAL.hpHigh:pr>0.25?PAL.hpMid:PAL.hpLow; }
+    const phpt = document.getElementById('player-battle-hp-text');
+    if (phpt) phpt.textContent = Player.hp+'/'+Player.totalMaxHp;
     const mr = clamp(Player.mp / Player.maxMp, 0, 1);
-    document.getElementById('player-battle-mp-bar').style.width = (mr*100)+'%';
-    document.getElementById('player-battle-mp-text').textContent = `${Player.mp}/${Player.maxMp}`;
+    const mpb = document.getElementById('player-battle-mp-bar');
+    if (mpb) mpb.style.width = (mr*100)+'%';
+    const mpt = document.getElementById('player-battle-mp-text');
+    if (mpt) mpt.textContent = Player.mp+'/'+Player.maxMp;
   },
 
-  _renderSprites() {
-    const ec = document.getElementById('battle-enemy-canvas');
-    const ectx = ec.getContext('2d');
-    ectx.clearRect(0, 0, ec.width, ec.height);
-    ectx.imageSmoothingEnabled = false;
-    TilePainter.battleEnemy(ectx, this.enemy.type, ec.width, ec.height,
-      { bob: 0, hurtAlpha: this._enemyHurt || 0 });
+  _renderAllSprites() {
     const pc = document.getElementById('battle-player-canvas');
-    const pctx = pc.getContext('2d');
-    pctx.clearRect(0, 0, pc.width, pc.height);
-    pctx.imageSmoothingEnabled = false;
-    TilePainter.battlePlayer(pctx, pc.width, pc.height,
-      { bob: 0, swingAngle: this._playerSwing || 0, hurtAlpha: this._playerHurt || 0 });
+    if (pc) {
+      const ctx = pc.getContext('2d');
+      ctx.clearRect(0,0,pc.width,pc.height);
+      ctx.imageSmoothingEnabled = false;
+      TilePainter.battlePlayer(ctx, pc.width, pc.height,
+        { bob:0, swingAngle:this._playerSwing||0, hurtAlpha:this._playerHurt||0 });
+    }
+    this.enemies.forEach((e, i) => {
+      const ec = document.getElementById('bec'+i);
+      if (!ec) return;
+      const ctx = ec.getContext('2d');
+      ctx.clearRect(0,0,ec.width,ec.height);
+      ctx.imageSmoothingEnabled = false;
+      if (e.alive) {
+        TilePainter.battleEnemy(ctx, e.type, ec.width, ec.height,
+          { bob:0, hurtAlpha:this._hurtTimers[i]||0 });
+      } else {
+        ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,ec.width,ec.height);
+        ctx.fillStyle='#555';
+        ctx.font='bold '+Math.floor(ec.width*0.22)+'px monospace';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('✗', ec.width/2, ec.height/2);
+      }
+    });
   },
 
-  _animHurtEnemy() {
-    this._enemyHurt = 1.0;
+  _animHurtEnemy(idx) {
+    this._hurtTimers[idx] = 1.0;
     const decay = () => {
-      this._enemyHurt = (this._enemyHurt||0)*0.78; this._renderSprites();
-      if(this._enemyHurt>0.04) requestAnimationFrame(decay);
-      else { this._enemyHurt=0; this._renderSprites(); }
+      this._hurtTimers[idx] = (this._hurtTimers[idx]||0)*0.78;
+      this._renderAllSprites();
+      if (this._hurtTimers[idx]>0.04) requestAnimationFrame(decay);
+      else { this._hurtTimers[idx]=0; this._renderAllSprites(); }
     };
     requestAnimationFrame(decay);
   },
+
   _animHurtPlayer() {
     this._playerHurt = 1.0;
     const decay = () => {
-      this._playerHurt = (this._playerHurt||0)*0.78; this._renderSprites();
-      if(this._playerHurt>0.04) requestAnimationFrame(decay);
-      else { this._playerHurt=0; this._renderSprites(); }
+      this._playerHurt = (this._playerHurt||0)*0.78; this._renderAllSprites();
+      if (this._playerHurt>0.04) requestAnimationFrame(decay);
+      else { this._playerHurt=0; this._renderAllSprites(); }
     };
     requestAnimationFrame(decay);
   },
+
   _animSwing() {
     this._playerSwing = 1.0;
     const decay = () => {
-      this._playerSwing = (this._playerSwing||0)*0.72; this._renderSprites();
-      if(this._playerSwing>0.04) requestAnimationFrame(decay);
-      else { this._playerSwing=0; this._renderSprites(); }
+      this._playerSwing = (this._playerSwing||0)*0.72; this._renderAllSprites();
+      if (this._playerSwing>0.04) requestAnimationFrame(decay);
+      else { this._playerSwing=0; this._renderAllSprites(); }
     };
     requestAnimationFrame(decay);
   },
 
   _log(text, cb, color) {
-    this._phase = 'log'; this._busy = true; this._logCb = cb || null;
+    this._phase = 'log'; this._busy = true; this._logCb = cb||null;
     const el = document.getElementById('battle-log-text');
-    el.textContent = text;
-    el.style.color = color || '';
+    el.textContent = text; el.style.color = color||'';
     clearTimeout(this._logTimer);
     this._logTimer = setTimeout(() => this._advanceLog(), 900);
   },
 
   _advanceLog() {
-    clearTimeout(this._logTimer); this._logTimer = null;
-    const cb = this._logCb; this._logCb = null; this._busy = false;
+    clearTimeout(this._logTimer); this._logTimer=null;
+    const cb=this._logCb; this._logCb=null; this._busy=false;
     if (cb) cb();
   },
 
@@ -3040,50 +3119,74 @@ const BattleSystem = {
   },
 
   _attack() {
-    this._busy = true; this._setMenuDisabled(true);
-    const e = this.enemy;
-    const dmg = Math.max(1, Player.totalAtk - e.def + rng(-2,2));
-    e.hp -= dmg;
+    this._busy=true; this._setMenuDisabled(true);
+    const target = this._firstAlive();
+    if (!target) { this._checkAllDead(); return; }
+    const idx = this.enemies.indexOf(target);
+    const dmg = Math.max(1, Player.totalAtk - target.def + rng(-2,2));
+    target.hp -= dmg;
     GameState.stats.damageDealt += dmg;
-    Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(e.id);
-    this._animSwing(); this._animHurtEnemy();
-    this._updateUI(); this._renderSprites();
-    this._log(`You hit ${e.name} for ${dmg}!`, () => {
-      if (e.hp <= 0) { this._win(); return; }
+    Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(target.id);
+    this._animSwing(); this._animHurtEnemy(idx);
+    this._updateUI();
+    this._log('You hit '+target.name+' for '+dmg+'!', () => {
+      if (this._checkAllDead()) return;
       this._enemyTurn();
     });
   },
 
+  _checkAllDead() {
+    if (this._aliveEnemies().length===0) { this._winAll(); return true; }
+    return false;
+  },
+
   _enemyTurn() {
     if (this._fleeCooldown > 0) this._fleeCooldown--;
-    const e = this.enemy;
+    const alive = this._aliveEnemies();
+    if (!alive.length) { this._showMenu(); return; }
+    this._doEnemyAttacks(alive, 0);
+  },
+
+  _doEnemyAttacks(alive, idx) {
+    if (idx >= alive.length) {
+      if (Player.hp <= 0) { this._lose(); return; }
+      this._showMenu(); return;
+    }
+    const e = alive[idx];
     const dmg = Player.takeDamage(e.atk);
     Camera.shake(4); flashScreen();
-    this._animHurtPlayer();
-    this._updateUI(); this._renderSprites();
-    const msg = dmg > 0 ? `${e.name} hits you for ${dmg}!` : `${e.name} attacks!`;
+    this._animHurtPlayer(); this._updateUI();
+    const msg = dmg > 0 ? e.name+' hits you for '+dmg+'!' : e.name+' attacks!';
     this._log(msg, () => {
       if (Player.hp <= 0) { this._lose(); return; }
-      this._showMenu();
+      this._doEnemyAttacks(alive, idx+1);
     });
   },
 
-  _win() {
-    const e = this.enemy;
-    e.alive = false; e.deathFlash = 8;
-    GameState.stats.enemiesKilled++;
-    const goldGained = rng(...e.gold);
-    Player.gainExp(e.exp);
-    Player.gainGold(goldGained);
-    CombatSystem._drop(e);
-    this._log(`${e.name} defeated!  +${e.exp}EXP  +${goldGained}g`, () => {
+  _winAll() {
+    let totalExp=0, totalGold=0;
+    const defeated=[];
+    for (const e of this.enemies) {
+      e.alive=false; e.deathFlash=8;
+      GameState.stats.enemiesKilled++;
+      totalExp+=e.exp; totalGold+=rng(...e.gold);
+      defeated.push(e.name);
+      CombatSystem._drop(e);
+    }
+    Player.gainExp(totalExp); Player.gainGold(totalGold);
+    this._updateUI(); this._renderAllSprites();
+    const msg = defeated.length > 1
+      ? 'Victory! '+defeated.join(' & ')+' defeated!  +'+totalExp+'EXP  +'+totalGold+'g'
+      : defeated[0]+' defeated!  +'+totalExp+'EXP  +'+totalGold+'g';
+    this._log(msg, () => {
       this._flash(() => {
         BattleRenderer.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
-        GameState.state = 'EXPLORE';
-        this.enemy = null;
+        GameState.state='EXPLORE';
+        GameState.lastBattleEnd=performance.now();
+        this.enemies=[];
         UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
-        Logger.add(`${e.name} defeated!`, 'loot');
+        for (const n of defeated) Logger.add(n+' defeated!','loot');
         Game.endTurn();
       });
     });
@@ -3094,8 +3197,9 @@ const BattleSystem = {
       this._flash(() => {
         BattleRenderer.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
-        GameState.state = 'EXPLORE';
-        this.enemy = null;
+        GameState.state='EXPLORE';
+        GameState.lastBattleEnd=performance.now();
+        this.enemies=[];
         Audio.play('death');
         UIManager.showGameOver();
         Renderer.draw(); UIManager.updateAll();
@@ -3104,132 +3208,128 @@ const BattleSystem = {
   },
 
   _flee() {
-    const FLEE_MP_COST = 4;
-    if (this._fleeCooldown > 0) {
-      this._log(`Can't flee yet — wait ${this._fleeCooldown} turn(s).`, null, '#ff6666'); return;
+    const FLEE_MP_COST=4;
+    if (this._fleeCooldown>0) {
+      this._log("Can't flee yet — wait "+this._fleeCooldown+" turn(s).",null,'#ff6666'); return;
     }
-    if (Player.mp < FLEE_MP_COST) {
-      this._log(`Not enough MP to flee! (costs ${FLEE_MP_COST} MP)`, null, '#ff6666'); return;
+    if (Player.mp<FLEE_MP_COST) {
+      this._log("Not enough MP to flee! (costs "+FLEE_MP_COST+" MP)",null,'#ff6666'); return;
     }
-    Player.mp -= FLEE_MP_COST; UIManager.updateVitals();
-    this._busy = true; this._setMenuDisabled(true);
-    const eFloor = ENEMY_DEFS[this.enemy.type]?.floor || 1;
-    const chance = clamp(0.55 - (GameState.floor - eFloor) * 0.08, 0.15, 0.80);
-    if (Math.random() < chance) {
+    Player.mp-=FLEE_MP_COST; UIManager.updateVitals();
+    this._busy=true; this._setMenuDisabled(true);
+    const eFloor=ENEMY_DEFS[this.enemies[0]?.type]?.floor||1;
+    const chance=clamp(0.55-(GameState.floor-eFloor)*0.08,0.15,0.80);
+    if (Math.random()<chance) {
       this._log('Fled successfully!', () => {
         this._flash(() => {
           BattleRenderer.stopLoop(); BattleMusic.stop();
           document.getElementById('battle-screen').classList.remove('active');
-          GameState.state = 'EXPLORE';
-          this.enemy = null;
+          GameState.state='EXPLORE';
+          GameState.lastBattleEnd=performance.now();
+          this.enemies=[];
           UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
           Game.endTurn();
         });
       });
     } else {
-      this._fleeCooldown = 2;
+      this._fleeCooldown=2;
       this._log("Couldn't escape!", () => this._enemyTurn());
     }
   },
 
   _showSkills() {
-    this._phase = 'skills';
-    const sub = document.getElementById('battle-sub-menu');
-    sub.innerHTML = ''; sub.classList.remove('hidden');
-    let any = false;
-    Player.skills.forEach((sid, i) => {
-      if (!sid) return; any = true;
-      const def = SKILL_DEFS[sid];
-      const canUse = Player.mp >= def.manaCost;
-      const b = document.createElement('button');
-      b.className = 'battle-sub-btn' + (canUse ? '' : ' insufficient');
-      b.textContent = `${def.icon} ${def.name} (${def.manaCost}MP)`;
-      if (canUse) b.onclick = () => this._useSkill(i);
+    this._phase='skills';
+    const sub=document.getElementById('battle-sub-menu');
+    sub.innerHTML=''; sub.classList.remove('hidden');
+    let any=false;
+    Player.skills.forEach((sid,i) => {
+      if (!sid) return;
+      const def=SKILL_DEFS[sid];
+      if (def.skillType==='movement') return;
+      any=true;
+      const canUse=Player.mp>=def.manaCost;
+      const b=document.createElement('button');
+      b.className='battle-sub-btn'+(canUse?'':' insufficient');
+      b.textContent=def.icon+' '+def.name+' ('+def.manaCost+'MP)';
+      if (canUse) b.onclick=()=>this._useSkill(i);
       sub.appendChild(b);
     });
     if (!any) {
-      const b = document.createElement('button');
-      b.className = 'battle-sub-btn insufficient';
-      b.textContent = 'No skills equipped';
+      const b=document.createElement('button');
+      b.className='battle-sub-btn insufficient';
+      b.textContent='No combat skills equipped';
       sub.appendChild(b);
     }
-    const back = document.createElement('button');
-    back.className = 'battle-sub-btn';
-    back.textContent = '< BACK';
-    back.onclick = () => this._showMenu();
+    const back=document.createElement('button');
+    back.className='battle-sub-btn';
+    back.textContent='< BACK';
+    back.onclick=()=>this._showMenu();
     sub.appendChild(back);
   },
 
   _useSkill(slot) {
-    const sid = Player.skills[slot]; if (!sid) return;
-    const def = SKILL_DEFS[sid];
-    const ok = CombatSystem.skill(slot);
+    const sid=Player.skills[slot]; if (!sid) return;
+    const def=SKILL_DEFS[sid];
+    const ok=CombatSystem.skill(slot);
     if (!ok) { this._showMenu(); return; }
-    this._updateUI(); this._renderSprites();
-    const e = this.enemy;
-    if (!e.alive) {
-      this._log(`${def.name}!  ${e.name} defeated!`, () => {
-        this._flash(() => {
-          BattleRenderer.stopLoop(); BattleMusic.stop();
-          document.getElementById('battle-screen').classList.remove('active');
-          GameState.state = 'EXPLORE';
-          this.enemy = null;
-          UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
-          Game.endTurn();
-        });
-      });
+    if (def.aoe) {
+      this.enemies.forEach((e,i) => { if (e.alive) this._animHurtEnemy(i); });
     } else {
-      this._log(`${def.name}!`, () => this._enemyTurn());
+      const t=this._firstAlive();
+      if (t) this._animHurtEnemy(this.enemies.indexOf(t));
     }
+    this._updateUI(); this._renderAllSprites();
+    if (this._checkAllDead()) return;
+    this._log(def.name+'!', () => this._enemyTurn());
   },
 
   _showItems() {
-    this._phase = 'items';
-    const sub = document.getElementById('battle-sub-menu');
-    sub.innerHTML = ''; sub.classList.remove('hidden');
-    const potions = Player.inventory.filter(inv => inv.item.type === 'potion');
+    this._phase='items';
+    const sub=document.getElementById('battle-sub-menu');
+    sub.innerHTML=''; sub.classList.remove('hidden');
+    const potions=Player.inventory.filter(inv=>inv.item.type==='potion');
     if (!potions.length) {
-      const b = document.createElement('button');
-      b.className = 'battle-sub-btn insufficient';
-      b.textContent = 'No usable items';
+      const b=document.createElement('button');
+      b.className='battle-sub-btn insufficient';
+      b.textContent='No usable items';
       sub.appendChild(b);
     } else {
-      potions.forEach(({ item }) => {
-        const realIdx = Player.inventory.findIndex(inv => inv.item === item);
-        const b = document.createElement('button');
-        b.className = 'battle-sub-btn';
-        b.textContent = `${item.icon||''} ${item.name}`;
-        b.onclick = () => this._useItem(realIdx);
+      potions.forEach(({item}) => {
+        const ri=Player.inventory.findIndex(inv=>inv.item===item);
+        const b=document.createElement('button');
+        b.className='battle-sub-btn';
+        b.textContent=(item.icon||'')+' '+item.name;
+        b.onclick=()=>this._useItem(ri);
         sub.appendChild(b);
       });
     }
-    const back = document.createElement('button');
-    back.className = 'battle-sub-btn';
-    back.textContent = '< BACK';
-    back.onclick = () => this._showMenu();
+    const back=document.createElement('button');
+    back.className='battle-sub-btn';
+    back.textContent='< BACK';
+    back.onclick=()=>this._showMenu();
     sub.appendChild(back);
   },
 
   _useItem(idx) {
-    if (idx < 0 || idx >= Player.inventory.length) { this._showMenu(); return; }
-    const { item } = Player.inventory[idx];
+    if (idx<0||idx>=Player.inventory.length) { this._showMenu(); return; }
+    const {item}=Player.inventory[idx];
     Player.useItem(idx);
-    this._updateUI(); this._renderSprites();
-    this._log(`Used ${item.icon||''} ${item.name}!`, () => this._enemyTurn());
+    this._updateUI(); this._renderAllSprites();
+    this._log('Used '+(item.icon||'')+' '+item.name+'!', () => this._enemyTurn());
   },
 
   onKey(key) {
-    if (this._phase === 'log') {
-      if (this._logTimer != null) { this._advanceLog(); }
+    if (this._phase==='log') {
+      if (this._logTimer!=null) { this._advanceLog(); }
       return;
     }
     if (this._busy) return;
-    if (this._phase === 'menu') {
+    if (this._phase==='menu') {
       if (key==='ArrowLeft'||key==='a'||key==='A') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
       if (key==='ArrowRight'||key==='d'||key==='D') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
-      const actions = ['attack','skills','item','flee'];
-      const sel = () => {
-        const a = actions[this._cursor];
+      const actions=['attack','skills','item','flee'];
+      const sel=()=>{
+        const a=actions[this._cursor];
         if (a==='attack') this._attack();
         else if (a==='skills') this._showSkills();
         else if (a==='item')   this._showItems();
@@ -3247,17 +3347,7 @@ const BattleSystem = {
   },
 };
 
-// ============================================================
-//  Renderer — layered drawing pipeline
-//  Layers (bottom to top):
-//    1. Floor tiles
-//    2. Wall tiles
-//    3. Stairs
-//    4. Chests / Merchant
-//    5. Enemies + HP bars
-//    6. Player
-//    7. Fog of War overlay
-// ============================================================
+
 const Renderer = {
   canvas:null, ctx:null,
 
@@ -3903,7 +3993,14 @@ const Game = {
     if(!t){ Logger.add('No adjacent enemy!','dim'); return; }
     BattleSystem.engage(t);
   },
-  trySkill(s){ if(CombatSystem.skill(s)){ Audio.playSkill(Player.skills[s]); this.endTurn(); } },
+  trySkill(s){
+    const sid=Player.skills[s]; if(!sid) return;
+    const def=SKILL_DEFS[sid];
+    if(def.skillType==='damage'){
+      Logger.add(def.icon+' Combat skills can only be used in battle!','warn'); return;
+    }
+    if(CombatSystem.skill(s)){ Audio.playSkill(sid); this.endTurn(); }
+  },
   tryQuickUse(){
     const idx=Player.inventory.findIndex(e=>e.item.type==='potion');
     if(idx===-1){ Logger.add('No potions in inventory!','warn'); return; }
@@ -3945,7 +4042,7 @@ const Game = {
     }
     if(GameState.state!=='BATTLE'){
       EntityManager.moveEnemies();
-      EntityManager.attackAdjacent();
+      EntityManager.checkAmbush();
     }
     // Passive MP regen: 2 MP every 3 turns
     if(GameState.turnCount%3===0) Player.restoreMp(2);
