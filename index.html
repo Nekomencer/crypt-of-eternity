@@ -159,7 +159,8 @@
     color: #5a5870;
     line-height: 1.4;
   }
-  #controls-hint span { white-space: nowrap; }
+  #controls-hint span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
+  #class-hint { white-space: normal !important; word-break: break-word; font-size: 8px; }
   #gold-display  { font-size: 9px; color: var(--gold); }
 
   /* OVERLAYS */
@@ -641,9 +642,9 @@
         <span id="class-hint" style="color:var(--gold);margin-bottom:4px"></span>
         <span>WASD/↑↓←→ Move</span>
         <span>Z/X/C/V Diagonal</span>
-        <span>SPC Attack &nbsp; Q Potion</span>
+        <span>SPC Atk · Q Potion</span>
         <span>1/2/3 Skills</span>
-        <span>I Inv &nbsp; E Talk</span>
+        <span>I Inv · E Talk</span>
         <span>ESC Pause</span>
       </div>
     </div>
@@ -5459,7 +5460,7 @@ function _applyClass(cls) {
   Logger.add('Class: ' + cls.icon + ' ' + cls.name + ' chosen!','skill');
   if(cls.passiveDesc) Logger.add('Passive: ' + cls.passiveDesc, 'skill');
   const ch=document.getElementById('class-hint');
-  if(ch) ch.textContent=cls.icon+' '+cls.name+(cls.passive?' · '+cls.passiveDesc.split('.')[0]:'');
+  if(ch) ch.textContent=cls.icon+' '+cls.name+(cls.passiveDesc?' · '+cls.passiveDesc.slice(0,28)+'…':'');
 }
 
 // ── Prevent pinch-zoom and double-tap zoom ────────────────────────
@@ -5508,7 +5509,7 @@ Game.init();
     });
     // Restore class hint label
     const cls = CLASSES.find(c=>c.passive===Player.passive);
-    if(cls){ const ch=document.getElementById('class-hint'); if(ch) ch.textContent=cls.icon+' '+cls.name+(cls.passive?' · '+cls.passiveDesc.split('.')[0]:''); }
+    if(cls){ const ch=document.getElementById('class-hint'); if(ch) ch.textContent=cls.icon+' '+cls.name+(cls.passiveDesc?' · '+cls.passiveDesc.slice(0,28)+'…':''); }
     GameState.stats = save.stats || { floorsCleared:0, enemiesKilled:0, goldCollected:0, damageDealt:0, damageTaken:0 };
     GameState.isPaused = false;
     Logger.clear();
