@@ -864,6 +864,11 @@ const PAL = {
   troll:        '#7040a0',
   demon:        '#c02020',
   lich:         '#8040c0',
+  wolf:         '#7a6040',
+  vampire:      '#8a1020',
+  wraith:       '#5030a0',
+  gargoyle:     '#507080',
+  ogre:         '#8a5030',
 
   hpHigh:       '#44cc44',
   hpMid:        '#ccaa00',
@@ -1019,12 +1024,23 @@ const SKILL_BOOKS = [
 // ── ENEMIES ───────────────────────────────────────────────────
 // Base stats are gentle — scaling is applied progressively per floor in spawnFloor().
 const ENEMY_DEFS = {
-  goblin:  {type:'goblin',  name:'Goblin',  col:PAL.goblin,  hp:8,  atk:2, def:0,exp:8, gold:[2,5],  floor:1},
-  orc:     {type:'orc',     name:'Orc',     col:PAL.orc,     hp:16, atk:4, def:1,exp:18,gold:[5,10], floor:2},
-  skeleton:{type:'skeleton',name:'Skeleton',col:PAL.skeleton,hp:12, atk:3, def:1,exp:14,gold:[3,8],  floor:2},
-  troll:   {type:'troll',   name:'Troll',   col:PAL.troll,   hp:30, atk:6, def:2,exp:30,gold:[10,18],floor:3},
-  demon:   {type:'demon',   name:'Demon',   col:PAL.demon,   hp:50, atk:10,def:3, exp:50, gold:[18,30], floor:5},
-  lich:    {type:'lich',   name:'The Lich',col:PAL.lich,    hp:280,atk:26,def:10,exp:400,gold:[150,250],floor:10,isBoss:true},
+  goblin:  {type:'goblin',  name:'Goblin',  col:PAL.goblin,  hp:10, atk:3, def:0,exp:8, gold:[1,4],  floor:1},
+  orc:     {type:'orc',     name:'Orc',     col:PAL.orc,     hp:20, atk:6, def:2,exp:18,gold:[4,8],  floor:2},
+  skeleton:{type:'skeleton',name:'Skeleton',col:PAL.skeleton,hp:16, atk:5, def:2,exp:14,gold:[2,6],  floor:2},
+  troll:   {type:'troll',   name:'Troll',   col:PAL.troll,   hp:40, atk:9, def:3,exp:30,gold:[7,14], floor:3},
+  demon:   {type:'demon',   name:'Demon',   col:PAL.demon,   hp:60, atk:14,def:4, exp:50, gold:[12,22], floor:5},
+  lich:      {type:'lich',     name:'The Lich',      col:PAL.lich,     hp:320, atk:30,def:12,exp:400, gold:[80,130], floor:10,isBoss:true},
+  // ── New regular enemies ──
+  wolf:      {type:'wolf',     name:'Dark Wolf',     col:PAL.wolf,     hp:14,  atk:5, def:0, exp:12,  gold:[1,4],   floor:1},
+  vampire:   {type:'vampire',  name:'Vampire',       col:PAL.vampire,  hp:50,  atk:12,def:3, exp:48,  gold:[10,18], floor:5},
+  wraith:    {type:'wraith',   name:'Shadow Wraith', col:PAL.wraith,   hp:40,  atk:16,def:2, exp:58,  gold:[12,20], floor:6},
+  gargoyle:  {type:'gargoyle', name:'Gargoyle',      col:PAL.gargoyle, hp:65,  atk:10,def:9, exp:50,  gold:[8,16],  floor:4},
+  ogre:      {type:'ogre',     name:'Ogre',          col:PAL.ogre,     hp:60,  atk:13,def:4, exp:42,  gold:[8,15],  floor:4},
+  // ── Mini-bosses (one per milestone floor) ──
+  warchief:  {type:'orc',      name:'Orc Warchief',  col:'#c07030',    hp:120, atk:16,def:6, exp:140, gold:[25,40], floor:3, isBoss:true},
+  golem:     {type:'gargoyle', name:'Stone Golem',   col:'#909898',    hp:200, atk:20,def:12,exp:210, gold:[40,65], floor:5, isBoss:true},
+  demonlord: {type:'demon',    name:'Demon Lord',    col:'#e82020',    hp:300, atk:28,def:9, exp:290, gold:[65,100],floor:7, isBoss:true},
+  dragon:    {type:'demon',    name:'Ancient Dragon',col:'#c84010',    hp:420, atk:36,def:14,exp:380, gold:[90,140],floor:9,isBoss:true},
 };
 
 // ── UTILITIES ─────────────────────────────────────────────────
@@ -1071,6 +1087,7 @@ const Player = {
   inventory:[],equipment:{weapon:null,armor:null},
   skills:[null,null,null],knownSkills:[],
   passive:null, evasionTurns:0, atkBuffAmt:0, atkBuffTurns:0, manaShield:false,
+  statusEffects:{burning:0,burnDmg:0},
 
   get totalAtk()   { return this.atk  + (this.equipment.weapon?.item?.atk||0) + (this.atkBuffAmt||0); },
   get totalDef()   { return this.def  + (this.equipment.armor?.item?.def||0);  },
@@ -1113,6 +1130,13 @@ const Player = {
     this.removeItem(i);
     if(old) this.addItem(old.item,old.rarity);
   },
+  unequipItem(slot){
+    const eq=this.equipment[slot]; if(!eq) return false;
+    if(this.inventory.length>=INV_MAX){ Logger.add('Inventory full — cannot unequip!','warn'); return false; }
+    this.addItem(eq.item,eq.rarity);
+    this.equipment[slot]=null;
+    return true;
+  },
   useItem(i) {
     const {item}=this.inventory[i];
     if(item.type==='potion'){
@@ -1142,7 +1166,8 @@ const Player = {
       level:1,exp:0,expNext:100,gold:0,inventory:[],
       equipment:{weapon:{item:{name:'Worn Sword',type:'weapon',icon:'🗡',atk:2,baseVal:20},rarity:'common'},armor:null},
       skills:[null,null,null],knownSkills:[],
-      passive:null, evasionTurns:0, atkBuffAmt:0, atkBuffTurns:0, manaShield:false
+      passive:null, evasionTurns:0, atkBuffAmt:0, atkBuffTurns:0, manaShield:false,
+      statusEffects:{burning:0,burnDmg:0}
     });
   }
 };
@@ -1841,6 +1866,130 @@ const TilePainter = {
         ctx.fillRect(cx+hSl*0.01,by-H*0.38,Math.floor(hSl*0.24),Math.floor(hSl*0.20));
         ctx.fillStyle='#cc88ff';
         ctx.fillRect(cx-1,by-H*0.62,2,2);
+        break;
+      }
+      case 'wolf': {
+        // Four-legged body
+        ctx.fillStyle=PAL.wolf;
+        ctx.fillRect(Math.floor(cx-W*0.28),Math.floor(by-H*0.14),Math.floor(W*0.56),Math.floor(H*0.20));
+        // Legs (4)
+        ctx.fillRect(Math.floor(cx-W*0.26),Math.floor(by+H*0.06),Math.floor(W*0.10),Math.floor(H*0.14));
+        ctx.fillRect(Math.floor(cx-W*0.10),Math.floor(by+H*0.06),Math.floor(W*0.10),Math.floor(H*0.14));
+        ctx.fillRect(Math.floor(cx+W*0.02),Math.floor(by+H*0.06),Math.floor(W*0.10),Math.floor(H*0.14));
+        ctx.fillRect(Math.floor(cx+W*0.18),Math.floor(by+H*0.06),Math.floor(W*0.10),Math.floor(H*0.14));
+        // Head
+        ctx.fillStyle='#6a5030';
+        ctx.fillRect(Math.floor(cx+W*0.20),Math.floor(by-H*0.26),Math.floor(W*0.22),Math.floor(H*0.18));
+        // Snout
+        ctx.fillStyle=PAL.wolf;
+        ctx.fillRect(Math.floor(cx+W*0.36),Math.floor(by-H*0.16),Math.floor(W*0.12),Math.floor(H*0.08));
+        // Eye glow (red)
+        ctx.fillStyle='#ff3030';
+        ctx.fillRect(Math.floor(cx+W*0.36),Math.floor(by-H*0.22),Math.floor(W*0.04),Math.floor(H*0.04));
+        // Tail (upward arc via rect)
+        ctx.fillStyle=PAL.wolf;
+        ctx.fillRect(Math.floor(cx-W*0.36),Math.floor(by-H*0.28),Math.floor(W*0.08),Math.floor(H*0.16));
+        ctx.fillRect(Math.floor(cx-W*0.30),Math.floor(by-H*0.36),Math.floor(W*0.08),Math.floor(H*0.10));
+        break;
+      }
+      case 'vampire': {
+        // Cape
+        ctx.fillStyle='#500010';
+        ctx.fillRect(Math.floor(cx-W*0.24),Math.floor(by-H*0.28),Math.floor(W*0.48),Math.floor(H*0.50));
+        // Inner cape lighter
+        ctx.fillStyle='#200008';
+        ctx.fillRect(Math.floor(cx-W*0.12),Math.floor(by-H*0.22),Math.floor(W*0.24),Math.floor(H*0.40));
+        // Head
+        const vhSz=Math.floor(W*0.26);
+        ctx.fillStyle='#d4c0b8';
+        ctx.fillRect(Math.floor(cx-vhSz/2),Math.floor(by-H*0.54),vhSz,Math.floor(vhSz*1.1));
+        // Hair black
+        ctx.fillStyle='#100808';
+        ctx.fillRect(Math.floor(cx-vhSz/2),Math.floor(by-H*0.54),vhSz,Math.floor(vhSz*0.35));
+        // Red eyes
+        ctx.fillStyle='#ff2020';
+        ctx.fillRect(Math.floor(cx-vhSz*0.30),Math.floor(by-H*0.40),Math.floor(vhSz*0.22),Math.floor(vhSz*0.14));
+        ctx.fillRect(Math.floor(cx+vhSz*0.08),Math.floor(by-H*0.40),Math.floor(vhSz*0.22),Math.floor(vhSz*0.14));
+        // Fangs
+        ctx.fillStyle='#f0f0f0';
+        ctx.fillRect(Math.floor(cx-W*0.06),Math.floor(by-H*0.26),Math.floor(W*0.04),Math.floor(H*0.06));
+        ctx.fillRect(Math.floor(cx+W*0.02),Math.floor(by-H*0.26),Math.floor(W*0.04),Math.floor(H*0.06));
+        break;
+      }
+      case 'wraith': {
+        // Wispy body — semi-transparent feel via layered dark rects
+        ctx.fillStyle='#2010508a';
+        ctx.fillRect(Math.floor(cx-W*0.20),Math.floor(by-H*0.30),Math.floor(W*0.40),Math.floor(H*0.52));
+        ctx.fillStyle=PAL.wraith;
+        ctx.fillRect(Math.floor(cx-W*0.14),Math.floor(by-H*0.28),Math.floor(W*0.28),Math.floor(H*0.42));
+        // Tattered bottom wisps
+        ctx.fillStyle='#3820608a';
+        for(let wi=0;wi<3;wi++){
+          ctx.fillRect(Math.floor(cx-W*0.18+wi*W*0.14),Math.floor(by+H*0.22),Math.floor(W*0.06),Math.floor(H*0.12+wi*H*0.04));
+        }
+        // Glowing skull face
+        const wrSz=Math.floor(W*0.22);
+        ctx.fillStyle='#9070d0';
+        ctx.fillRect(Math.floor(cx-wrSz/2),Math.floor(by-H*0.52),wrSz,Math.floor(wrSz*1.0));
+        // Dark hollow eyes
+        ctx.fillStyle='#000000';
+        ctx.fillRect(Math.floor(cx-wrSz*0.32),Math.floor(by-H*0.42),Math.floor(wrSz*0.24),Math.floor(wrSz*0.20));
+        ctx.fillRect(Math.floor(cx+wrSz*0.08),Math.floor(by-H*0.42),Math.floor(wrSz*0.24),Math.floor(wrSz*0.20));
+        // White glow in eye sockets
+        ctx.fillStyle='#d0c0ff';
+        ctx.fillRect(Math.floor(cx-wrSz*0.26),Math.floor(by-H*0.40),Math.floor(wrSz*0.12),Math.floor(wrSz*0.10));
+        ctx.fillRect(Math.floor(cx+wrSz*0.14),Math.floor(by-H*0.40),Math.floor(wrSz*0.12),Math.floor(wrSz*0.10));
+        break;
+      }
+      case 'gargoyle': {
+        // Stone body
+        ctx.fillStyle=PAL.gargoyle;
+        ctx.fillRect(Math.floor(cx-W*0.24),Math.floor(by-H*0.22),Math.floor(W*0.48),Math.floor(H*0.40));
+        // Wings
+        ctx.fillStyle='#405868';
+        ctx.fillRect(Math.floor(cx-W*0.44),Math.floor(by-H*0.30),Math.floor(W*0.22),Math.floor(H*0.28));
+        ctx.fillRect(Math.floor(cx+W*0.22),Math.floor(by-H*0.30),Math.floor(W*0.22),Math.floor(H*0.28));
+        // Head
+        const ghSz=Math.floor(W*0.26);
+        ctx.fillStyle='#406070';
+        ctx.fillRect(Math.floor(cx-ghSz/2),Math.floor(by-H*0.50),ghSz,Math.floor(ghSz*0.90));
+        // Horns
+        ctx.fillStyle='#304050';
+        ctx.fillRect(Math.floor(cx-ghSz*0.30),Math.floor(by-H*0.64),Math.floor(W*0.06),Math.floor(H*0.16));
+        ctx.fillRect(Math.floor(cx+ghSz*0.24),Math.floor(by-H*0.64),Math.floor(W*0.06),Math.floor(H*0.16));
+        // Orange eyes
+        ctx.fillStyle='#ff8020';
+        ctx.fillRect(Math.floor(cx-ghSz*0.24),Math.floor(by-H*0.40),Math.floor(ghSz*0.18),Math.floor(ghSz*0.14));
+        ctx.fillRect(Math.floor(cx+ghSz*0.06),Math.floor(by-H*0.40),Math.floor(ghSz*0.18),Math.floor(ghSz*0.14));
+        break;
+      }
+      case 'ogre': {
+        // Big green body
+        ctx.fillStyle=PAL.ogre;
+        ctx.fillRect(Math.floor(cx-W*0.32),Math.floor(by-H*0.26),Math.floor(W*0.64),Math.floor(H*0.44));
+        // Legs
+        ctx.fillStyle='#7a4020';
+        ctx.fillRect(Math.floor(cx-W*0.28),Math.floor(by+H*0.18),Math.floor(W*0.22),Math.floor(H*0.16));
+        ctx.fillRect(Math.floor(cx+W*0.06),Math.floor(by+H*0.18),Math.floor(W*0.22),Math.floor(H*0.16));
+        // Arms (wide)
+        ctx.fillStyle=PAL.ogre;
+        ctx.fillRect(Math.floor(cx-W*0.48),Math.floor(by-H*0.22),Math.floor(W*0.18),Math.floor(H*0.32));
+        ctx.fillRect(Math.floor(cx+W*0.30),Math.floor(by-H*0.22),Math.floor(W*0.18),Math.floor(H*0.32));
+        // Club in right hand
+        ctx.fillStyle='#6a4010';
+        ctx.fillRect(Math.floor(cx+W*0.44),Math.floor(by-H*0.36),Math.floor(W*0.10),Math.floor(H*0.42));
+        ctx.fillRect(Math.floor(cx+W*0.38),Math.floor(by-H*0.40),Math.floor(W*0.22),Math.floor(H*0.14));
+        // Head
+        const ohSz=Math.floor(W*0.34);
+        ctx.fillStyle='#9a5828';
+        ctx.fillRect(Math.floor(cx-ohSz/2),Math.floor(by-H*0.58),ohSz,Math.floor(ohSz*0.86));
+        // Angry brow
+        ctx.fillStyle='#5a3010';
+        ctx.fillRect(Math.floor(cx-ohSz*0.36),Math.floor(by-H*0.50),Math.floor(ohSz*0.80),Math.floor(H*0.06));
+        // Eyes
+        ctx.fillStyle='#ff6010';
+        ctx.fillRect(Math.floor(cx-ohSz*0.28),Math.floor(by-H*0.42),Math.floor(ohSz*0.22),Math.floor(ohSz*0.16));
+        ctx.fillRect(Math.floor(cx+ohSz*0.06),Math.floor(by-H*0.42),Math.floor(ohSz*0.22),Math.floor(ohSz*0.16));
         break;
       }
     }
@@ -2843,6 +2992,226 @@ const TilePainter = {
       ctx.lineTo(hxl+Math.floor(hwl*0.30),hyl+Math.floor(hhl*0.22));
       ctx.lineTo(hxl+Math.floor(hwl*0.40),hyl+Math.floor(hhl*0.40));
       ctx.stroke();
+    } else if (type === 'wolf') {
+      // Body (horizontal quadruped)
+      ctx.fillStyle = PAL.wolf;
+      ctx.fillRect(Math.floor(W*0.22), Math.floor(H*0.46), Math.floor(W*0.56), Math.floor(H*0.26));
+      // Legs
+      ctx.fillStyle = '#6a5030';
+      ctx.fillRect(Math.floor(W*0.24), Math.floor(H*0.72), Math.floor(W*0.10), Math.floor(H*0.18));
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.72), Math.floor(W*0.10), Math.floor(H*0.18));
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.72), Math.floor(W*0.10), Math.floor(H*0.18));
+      ctx.fillRect(Math.floor(W*0.66), Math.floor(H*0.72), Math.floor(W*0.10), Math.floor(H*0.18));
+      // Head
+      ctx.fillStyle = '#6a5030';
+      ctx.fillRect(Math.floor(W*0.62), Math.floor(H*0.26), Math.floor(W*0.28), Math.floor(H*0.26));
+      // Snout
+      ctx.fillStyle = PAL.wolf;
+      ctx.fillRect(Math.floor(W*0.82), Math.floor(H*0.38), Math.floor(W*0.14), Math.floor(H*0.14));
+      // Red eyes
+      ctx.fillStyle = '#ff2020';
+      ctx.fillRect(Math.floor(W*0.74), Math.floor(H*0.30), Math.floor(W*0.07), Math.floor(H*0.07));
+      ctx.fillRect(Math.floor(W*0.86), Math.floor(H*0.30), Math.floor(W*0.07), Math.floor(H*0.07));
+      // Fangs
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillRect(Math.floor(W*0.84), Math.floor(H*0.50), Math.floor(W*0.05), Math.floor(H*0.07));
+      ctx.fillRect(Math.floor(W*0.90), Math.floor(H*0.50), Math.floor(W*0.05), Math.floor(H*0.07));
+      // Tail curled upward on left
+      ctx.fillStyle = PAL.wolf;
+      ctx.fillRect(Math.floor(W*0.14), Math.floor(H*0.28), Math.floor(W*0.10), Math.floor(H*0.22));
+      ctx.fillRect(Math.floor(W*0.20), Math.floor(H*0.20), Math.floor(W*0.10), Math.floor(H*0.12));
+      // Dark fur markings
+      ctx.fillStyle = '#5a3818';
+      ctx.fillRect(Math.floor(W*0.36), Math.floor(H*0.50), Math.floor(W*0.24), Math.floor(H*0.08));
+    } else if (type === 'vampire') {
+      // Dramatic cape spread
+      ctx.fillStyle = '#500010';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), Math.floor(H*0.30));
+      ctx.lineTo(Math.floor(W*0.06), Math.floor(H*0.90));
+      ctx.lineTo(Math.floor(W*0.94), Math.floor(H*0.90));
+      ctx.closePath(); ctx.fill();
+      // Cape inner
+      ctx.fillStyle = '#2a0008';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), Math.floor(H*0.35));
+      ctx.lineTo(Math.floor(W*0.20), Math.floor(H*0.88));
+      ctx.lineTo(Math.floor(W*0.80), Math.floor(H*0.88));
+      ctx.closePath(); ctx.fill();
+      // Body
+      ctx.fillStyle = '#3a0010';
+      ctx.fillRect(Math.floor(W*0.38), Math.floor(H*0.44), Math.floor(W*0.24), Math.floor(H*0.32));
+      // Shirt collar white
+      ctx.fillStyle = '#e0d8d0';
+      ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.10));
+      // Head
+      const vhW = Math.floor(W*0.30), vhH = Math.floor(H*0.28);
+      const vhx = Math.floor(W*0.35), vhy = Math.floor(H*0.12);
+      ctx.fillStyle = '#c0aca4';
+      ctx.beginPath(); ctx.ellipse(vhx+vhW/2, vhy+vhH*0.50, vhW/2, vhH/2, 0, 0, Math.PI*2); ctx.fill();
+      // Hair — black widow's peak
+      ctx.fillStyle = '#100808';
+      ctx.fillRect(vhx, vhy, vhW, Math.floor(vhH*0.36));
+      ctx.beginPath();
+      ctx.moveTo(vhx+vhW/2-6, vhy+Math.floor(vhH*0.36));
+      ctx.lineTo(vhx+vhW/2, vhy+Math.floor(vhH*0.54));
+      ctx.lineTo(vhx+vhW/2+6, vhy+Math.floor(vhH*0.36));
+      ctx.fill();
+      // Eyes glowing red
+      ctx.fillStyle = '#ff1818';
+      const eyeY = vhy+Math.floor(vhH*0.52);
+      ctx.beginPath(); ctx.arc(vhx+Math.floor(vhW*0.30), eyeY, Math.floor(vhW*0.10), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(vhx+Math.floor(vhW*0.70), eyeY, Math.floor(vhW*0.10), 0, Math.PI*2); ctx.fill();
+      // Glow behind eyes
+      const evg = ctx.createRadialGradient(vhx+vhW/2, eyeY, 0, vhx+vhW/2, eyeY, vhW*0.60);
+      evg.addColorStop(0,'rgba(255,0,20,0.20)'); evg.addColorStop(1,'transparent');
+      ctx.fillStyle=evg; ctx.fillRect(vhx-10, vhy, vhW+20, vhH);
+      // Fangs
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(vhx+Math.floor(vhW*0.36), vhy+Math.floor(vhH*0.76), Math.floor(vhW*0.09), Math.floor(vhH*0.16));
+      ctx.fillRect(vhx+Math.floor(vhW*0.55), vhy+Math.floor(vhH*0.76), Math.floor(vhW*0.09), Math.floor(vhH*0.16));
+      // Arms out
+      ctx.fillStyle = '#3a0010';
+      ctx.fillRect(Math.floor(W*0.12), Math.floor(H*0.42), Math.floor(W*0.26), Math.floor(H*0.10));
+      ctx.fillRect(Math.floor(W*0.62), Math.floor(H*0.42), Math.floor(W*0.26), Math.floor(H*0.10));
+      // Pale hands
+      ctx.fillStyle = '#c0aca4';
+      ctx.fillRect(Math.floor(W*0.08), Math.floor(H*0.40), Math.floor(W*0.08), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.84), Math.floor(H*0.40), Math.floor(W*0.08), Math.floor(H*0.14));
+    } else if (type === 'wraith') {
+      // Wispy glowing aura
+      const wra = ctx.createRadialGradient(W*0.50, H*0.50, H*0.06, W*0.50, H*0.50, W*0.62);
+      wra.addColorStop(0,'rgba(80,30,170,0.22)'); wra.addColorStop(1,'transparent');
+      ctx.fillStyle = wra; ctx.fillRect(0, 0, W, H);
+      // Floating wispy body - ethereal shroud
+      ctx.fillStyle = '#3010708a';
+      ctx.fillRect(Math.floor(W*0.28), Math.floor(H*0.28), Math.floor(W*0.44), Math.floor(H*0.62));
+      ctx.fillStyle = PAL.wraith;
+      ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.26), Math.floor(W*0.36), Math.floor(H*0.56));
+      // Lighter inner core
+      ctx.fillStyle = '#7050c0';
+      ctx.fillRect(Math.floor(W*0.40), Math.floor(H*0.30), Math.floor(W*0.20), Math.floor(H*0.38));
+      // Tattered wisps at bottom
+      ctx.fillStyle = '#4020808a';
+      for (let wi = 0; wi < 5; wi++) {
+        ctx.fillRect(Math.floor(W*(0.26+wi*0.10)), Math.floor(H*0.82), Math.floor(W*0.06), Math.floor(H*(0.06+wi%3*0.04)));
+      }
+      // Skull head
+      const wrHW = Math.floor(W*0.32), wrHH = Math.floor(H*0.30);
+      const wrHX = Math.floor(W*0.34), wrHY = Math.floor(H*0.04);
+      ctx.fillStyle = '#b090e8';
+      ctx.beginPath(); ctx.ellipse(wrHX+wrHW/2, wrHY+wrHH*0.44, wrHW/2, wrHH/2, 0, 0, Math.PI*2); ctx.fill();
+      // Dark hollows
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.ellipse(wrHX+Math.floor(wrHW*0.28), wrHY+Math.floor(wrHH*0.44), Math.floor(wrHW*0.14), Math.floor(wrHH*0.15), 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(wrHX+Math.floor(wrHW*0.72), wrHY+Math.floor(wrHH*0.44), Math.floor(wrHW*0.14), Math.floor(wrHH*0.15), 0, 0, Math.PI*2); ctx.fill();
+      // Glowing eye cores
+      ctx.fillStyle = '#d0c0ff';
+      ctx.beginPath(); ctx.arc(wrHX+Math.floor(wrHW*0.28), wrHY+Math.floor(wrHH*0.44), Math.floor(wrHW*0.07), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(wrHX+Math.floor(wrHW*0.72), wrHY+Math.floor(wrHH*0.44), Math.floor(wrHW*0.07), 0, Math.PI*2); ctx.fill();
+      // Reaching claws
+      ctx.fillStyle = '#5030a0';
+      ctx.fillRect(Math.floor(W*0.06), Math.floor(H*0.36), Math.floor(W*0.26), Math.floor(H*0.07));
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.36), Math.floor(W*0.26), Math.floor(H*0.07));
+      // Claw fingers
+      ctx.fillStyle = '#7050b8';
+      for (let f=0;f<3;f++) {
+        ctx.fillRect(Math.floor(W*(0.06+f*0.06)), Math.floor(H*0.28), Math.floor(W*0.03), Math.floor(H*0.10));
+        ctx.fillRect(Math.floor(W*(0.76+f*0.06)), Math.floor(H*0.28), Math.floor(W*0.03), Math.floor(H*0.10));
+      }
+    } else if (type === 'gargoyle') {
+      // Stone wings spread
+      ctx.fillStyle = '#304858';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), Math.floor(H*0.38));
+      ctx.lineTo(Math.floor(W*0.04), Math.floor(H*0.72));
+      ctx.lineTo(Math.floor(W*0.04), Math.floor(H*0.46));
+      ctx.lineTo(Math.floor(W*0.28), Math.floor(H*0.34));
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), Math.floor(H*0.38));
+      ctx.lineTo(Math.floor(W*0.96), Math.floor(H*0.72));
+      ctx.lineTo(Math.floor(W*0.96), Math.floor(H*0.46));
+      ctx.lineTo(Math.floor(W*0.72), Math.floor(H*0.34));
+      ctx.closePath(); ctx.fill();
+      // Stone body
+      ctx.fillStyle = PAL.gargoyle;
+      ctx.fillRect(Math.floor(W*0.30), Math.floor(H*0.34), Math.floor(W*0.40), Math.floor(H*0.48));
+      // Legs/claws
+      ctx.fillStyle = '#406070';
+      ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.82), Math.floor(W*0.14), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.54), Math.floor(H*0.82), Math.floor(W*0.14), Math.floor(H*0.14));
+      // Claw toes
+      ctx.fillStyle = '#2a3840';
+      for (let t=0;t<3;t++) ctx.fillRect(Math.floor(W*(0.30+t*0.06)), Math.floor(H*0.94), Math.floor(W*0.04), Math.floor(H*0.06));
+      for (let t=0;t<3;t++) ctx.fillRect(Math.floor(W*(0.52+t*0.06)), Math.floor(H*0.94), Math.floor(W*0.04), Math.floor(H*0.06));
+      // Arms
+      ctx.fillStyle = PAL.gargoyle;
+      ctx.fillRect(Math.floor(W*0.18), Math.floor(H*0.40), Math.floor(W*0.14), Math.floor(H*0.28));
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.40), Math.floor(W*0.14), Math.floor(H*0.28));
+      // Head
+      const ghW = Math.floor(W*0.34), ghH = Math.floor(H*0.28);
+      const ghX = Math.floor(W*0.33), ghY = Math.floor(H*0.06);
+      ctx.fillStyle = '#4a6878';
+      ctx.beginPath(); ctx.ellipse(ghX+ghW/2, ghY+ghH*0.50, ghW/2, ghH/2, 0, 0, Math.PI*2); ctx.fill();
+      // Horns
+      ctx.fillStyle = '#2a3840';
+      ctx.fillRect(ghX+Math.floor(ghW*0.14), ghY-Math.floor(ghH*0.30), Math.floor(ghW*0.10), Math.floor(ghH*0.40));
+      ctx.fillRect(ghX+Math.floor(ghW*0.76), ghY-Math.floor(ghH*0.30), Math.floor(ghW*0.10), Math.floor(ghH*0.40));
+      // Orange glowing eyes
+      const gEyeY = ghY + Math.floor(ghH*0.48);
+      ctx.fillStyle = '#ff8020';
+      ctx.beginPath(); ctx.arc(ghX+Math.floor(ghW*0.28), gEyeY, Math.floor(ghW*0.10), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ghX+Math.floor(ghW*0.72), gEyeY, Math.floor(ghW*0.10), 0, Math.PI*2); ctx.fill();
+      const geg = ctx.createRadialGradient(ghX+ghW/2, gEyeY, 0, ghX+ghW/2, gEyeY, ghW*0.60);
+      geg.addColorStop(0,'rgba(255,120,20,0.18)'); geg.addColorStop(1,'transparent');
+      ctx.fillStyle=geg; ctx.fillRect(ghX-10, ghY, ghW+20, ghH+20);
+      // Fanged jaw
+      ctx.fillStyle = '#2a3840';
+      ctx.fillRect(ghX+Math.floor(ghW*0.20), ghY+Math.floor(ghH*0.72), Math.floor(ghW*0.60), Math.floor(ghH*0.20));
+      ctx.fillStyle = '#d8d0c0';
+      for (let f=0;f<4;f++) ctx.fillRect(ghX+Math.floor(ghW*(0.24+f*0.14)), ghY+Math.floor(ghH*0.72), Math.floor(ghW*0.08), Math.floor(ghH*0.18));
+    } else if (type === 'ogre') {
+      // Massive body
+      ctx.fillStyle = PAL.ogre;
+      ctx.fillRect(Math.floor(W*0.22), Math.floor(H*0.30), Math.floor(W*0.56), Math.floor(H*0.52));
+      // Crude loincloth
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(W*0.30), Math.floor(H*0.70), Math.floor(W*0.40), Math.floor(H*0.16));
+      // Legs
+      ctx.fillStyle = PAL.ogre;
+      ctx.fillRect(Math.floor(W*0.28), Math.floor(H*0.82), Math.floor(W*0.18), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.54), Math.floor(H*0.82), Math.floor(W*0.18), Math.floor(H*0.14));
+      // Arms — thick
+      ctx.fillStyle = PAL.ogre;
+      ctx.fillRect(Math.floor(W*0.06), Math.floor(H*0.30), Math.floor(W*0.18), Math.floor(H*0.40));
+      ctx.fillRect(Math.floor(W*0.76), Math.floor(H*0.30), Math.floor(W*0.18), Math.floor(H*0.40));
+      // Club in right hand
+      ctx.fillStyle = '#6a4010';
+      ctx.fillRect(Math.floor(W*0.80), Math.floor(H*0.06), Math.floor(W*0.10), Math.floor(H*0.48));
+      ctx.fillRect(Math.floor(W*0.74), Math.floor(H*0.04), Math.floor(W*0.22), Math.floor(H*0.14));
+      // Metal band on club
+      ctx.fillStyle = '#808898';
+      ctx.fillRect(Math.floor(W*0.75), Math.floor(H*0.17), Math.floor(W*0.20), Math.floor(H*0.04));
+      // Head
+      const oghW = Math.floor(W*0.42), oghH = Math.floor(H*0.28);
+      const oghX = Math.floor(W*0.29), oghY = Math.floor(H*0.04);
+      ctx.fillStyle = '#a06030';
+      ctx.beginPath(); ctx.ellipse(oghX+oghW/2, oghY+oghH*0.50, oghW/2, oghH/2, 0, 0, Math.PI*2); ctx.fill();
+      // Angry unibrow
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(oghX+Math.floor(oghW*0.14), oghY+Math.floor(oghH*0.30), Math.floor(oghW*0.72), Math.floor(oghH*0.14));
+      // Eyes
+      ctx.fillStyle = '#ff6010';
+      ctx.beginPath(); ctx.arc(oghX+Math.floor(oghW*0.30), oghY+Math.floor(oghH*0.52), Math.floor(oghW*0.11), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(oghX+Math.floor(oghW*0.70), oghY+Math.floor(oghH*0.52), Math.floor(oghW*0.11), 0, Math.PI*2); ctx.fill();
+      // Snout / jaw
+      ctx.fillStyle = '#8a5020';
+      ctx.fillRect(oghX+Math.floor(oghW*0.28), oghY+Math.floor(oghH*0.68), Math.floor(oghW*0.44), Math.floor(oghH*0.24));
+      // Tusk
+      ctx.fillStyle = '#e8e0c0';
+      ctx.fillRect(oghX+Math.floor(oghW*0.32), oghY+Math.floor(oghH*0.84), Math.floor(oghW*0.12), Math.floor(oghH*0.16));
+      ctx.fillRect(oghX+Math.floor(oghW*0.56), oghY+Math.floor(oghH*0.84), Math.floor(oghW*0.12), Math.floor(oghH*0.16));
     }
 
     // Hurt flash
@@ -2863,7 +3232,7 @@ const EntityManager = {
   spawnFloor(floor,rooms){
     this.enemies=[]; this.chests=[]; this.merchant=null;
     // Enemy count: starts at 2 on floor 1, grows slowly, caps at 18
-    const numE=Math.min(2+Math.floor(floor*1.5),18), numC=rng(2,4);
+    const numE=Math.min(3+Math.floor(floor*1.8),22), numC=rng(2,3);
     const hasMerchant=floor===1||rng(0,2)===0;
     const occupied=new Set(), key=(x,y)=>`${x},${y}`;
     occupied.add(key(rooms[0].cx,rooms[0].cy));
@@ -2881,7 +3250,7 @@ const EntityManager = {
     for(let i=0;i<numE;i++){
       const pos=place(); if(!pos) continue;
       const def=this._pick(floor);
-      const fm=1+(floor-1)*0.18, gm=1+(floor-1)*0.15;
+      const fm=1+(floor-1)*0.22, gm=1+(floor-1)*0.10;
       this.enemies.push({...def,id:i,x:pos.x,y:pos.y,
         hp:   Math.round(def.hp  *fm),
         maxHp:Math.round(def.hp  *fm),
@@ -2894,7 +3263,23 @@ const EntityManager = {
     for(let i=0;i<numC;i++){ const p=place(); if(p) this.chests.push({x:p.x,y:p.y,opened:false}); }
     if(hasMerchant){ const p=place(); if(p) this.merchant={x:p.x,y:p.y}; }
 
-    // Boss spawn on floor 10
+    // Mini-boss spawns on milestone floors (3, 5, 7, 9)
+    const miniBossMap={3:'warchief', 5:'golem', 7:'demonlord', 9:'dragon'};
+    if(miniBossMap[floor]){
+      const mbRoom=rooms[Math.floor(rooms.length*0.6)]||rooms[1]||rooms[0];
+      const mbx=mbRoom.cx, mby=mbRoom.cy;
+      const existMb=this.enemies.findIndex(e=>e.x===mbx&&e.y===mby);
+      if(existMb>=0) this.enemies.splice(existMb,1);
+      const mbd={...ENEMY_DEFS[miniBossMap[floor]]};
+      const fm=1+(floor-1)*0.18;
+      this.enemies.push({...mbd,id:this.enemies.length,x:mbx,y:mby,alive:true,
+        hp:Math.round(mbd.hp*fm), maxHp:Math.round(mbd.hp*fm),
+        atk:Math.round(mbd.atk*fm), def:mbd.def,
+        statusEffects:{frozen:0,burning:0,burnDmg:0,shocked:0}});
+      Logger.add(`⚠ A powerful foe lurks on floor ${floor}!`,'warn');
+    }
+
+    // Final boss spawn on floor 10
     if(floor===MAX_FLOOR){
       const bossRoom=rooms[Math.floor(rooms.length*0.6)]||rooms[1]||rooms[0];
       const bx=bossRoom.cx, by=bossRoom.cy;
@@ -2912,13 +3297,18 @@ const EntityManager = {
   },
 
   _pick(floor){
-    let allowed;
-    if(floor<=1)      allowed=['goblin'];
-    else if(floor<=2) allowed=['goblin','skeleton'];
-    else if(floor<=3) allowed=['goblin','skeleton','orc'];
-    else if(floor<=5) allowed=['goblin','skeleton','orc','troll'];
-    else              allowed=['goblin','skeleton','orc','troll','demon'];
-    const pool=Object.values(ENEMY_DEFS).filter(d=>allowed.includes(d.type));
+    // Filter out bosses (isBoss:true) — they're placed explicitly
+    let keys;
+    if(floor<=1)      keys=['goblin','wolf'];
+    else if(floor<=2) keys=['goblin','wolf','skeleton'];
+    else if(floor<=3) keys=['goblin','skeleton','orc','wolf'];
+    else if(floor<=4) keys=['skeleton','orc','gargoyle','ogre'];
+    else if(floor<=5) keys=['orc','troll','gargoyle','ogre','vampire'];
+    else if(floor<=6) keys=['troll','gargoyle','vampire','wraith'];
+    else if(floor<=7) keys=['troll','demon','vampire','wraith'];
+    else if(floor<=8) keys=['troll','demon','wraith'];
+    else              keys=['demon','wraith'];
+    const pool=keys.map(k=>ENEMY_DEFS[k]).filter(Boolean);
     return {...pool[rng(0,pool.length-1)]};
   },
   at(x,y){ return this.enemies.find(e=>e.alive&&!e.deathFlash&&e.x===x&&e.y===y)||null; },
@@ -3092,18 +3482,18 @@ const CombatSystem = {
       if(ep){ MapGen.tiles[ep.y][ep.x]=T.EXIT; Logger.add('✨ An exit portal shimmers into existence!','skill'); }
     }
     const floor=GameState.floor;
-    // Drop chance: 12% on floor 1, rising to 30% by floor 7+
-    const dropChance=Math.min(12+floor*3, 30);
+    // Drop chance: 8% on floor 1, rising to 20% by floor 8+
+    const dropChance=Math.min(8+floor*2, 20);
     if(rng(1,100)>dropChance) return;
 
-    // 55% health potions, 25% mana potions, 20% equipment
+    // 45% health potions, 25% mana potions, 30% equipment
     const roll=rng(1,100);
     const playerClass=Player.passive==='fortitude'?'warrior':Player.passive==='arcane'?'mage':'rogue';
     let item;
-    if(roll<=55){
-      item={...mkP('Health Potion','🧪',30,0,1), baseVal:25};
-    } else if(roll<=80){
-      item={...mkP('Mana Potion','💧',0,25,1), baseVal:25};
+    if(roll<=45){
+      item={...mkP('Health Potion','🧪',20,0,1), baseVal:20};
+    } else if(roll<=70){
+      item={...mkP('Mana Potion','💧',0,20,1), baseVal:20};
     } else {
       const pool=ITEM_POOL.filter(it=>it.floor<=floor&&it.type!=='book'&&it.type!=='potion'&&(it.forClass==='any'||it.forClass===playerClass));
       if(!pool.length){ item={...mkP('Health Potion','🧪',30,0,1), baseVal:25}; }
@@ -3120,11 +3510,11 @@ const CombatSystem = {
       Logger.addHTML(`Dropped: ${item.icon} <span style="color:${RARITY_COLOR[rarity]||'#aaa'}">${item.name}</span> <span style="color:#666">(${rarity})</span>`,'loot');
     }
   },
-  _rarity(f){ const r=rng(1,100); if(f>=4&&r<=10)return'epic'; if(f>=2&&r<=30)return'rare'; return'common'; },
+  _rarity(f){ const r=rng(1,100); if(f>=6&&r<=5)return'epic'; if(f>=3&&r<=18)return'rare'; return'common'; },
   _scale(item,rarity,floor){
-    const m={common:1,rare:1.5,epic:2.2}[rarity], s={...item};
-    if(s.atk) s.atk=Math.ceil(s.atk*m*(1+floor*0.1));
-    if(s.def) s.def=Math.ceil(s.def*m*(1+floor*0.1));
+    const m={common:1,rare:1.25,epic:1.7}[rarity], s={...item};
+    if(s.atk) s.atk=Math.ceil(s.atk*m*(1+floor*0.07));
+    if(s.def) s.def=Math.ceil(s.def*m*(1+floor*0.07));
     if(s.hp&&s.type!=='potion') s.hp=Math.ceil(s.hp*m);
     if(s.baseVal) s.baseVal=Math.ceil(s.baseVal*m*(1+floor*0.08));
     return s;
@@ -3132,10 +3522,10 @@ const CombatSystem = {
   openChest(ch){
     if(ch.opened) return; ch.opened=true;
     Audio.play('chest');
-    const gold=rng(5,8+GameState.floor*4);
+    const gold=rng(3,5+GameState.floor*2);
     Player.gainGold(gold); Logger.add(`Chest opened! +${gold} gold`,'gold');
     const playerClass=Player.passive==='fortitude'?'warrior':Player.passive==='arcane'?'mage':'rogue';
-    if(rng(0,1)===1){
+    if(rng(0,2)===0){
       const pool=ITEM_POOL.filter(it=>it.floor<=GameState.floor&&(it.forClass==='any'||it.forClass===playerClass));
       if(pool.length){
         const item={...pool[rng(0,pool.length-1)]};
@@ -4075,6 +4465,135 @@ const BattleSystem = {
         return;
       }
     }
+
+    // ── Enemy special abilities (25% chance, type-based) ──
+    const specialChance = e.isBoss ? 0.40 : 0.25;
+    if (Math.random() < specialChance) {
+      const next = () => this._doEnemyAttacks(alive, idx+1);
+      const ei = this.enemies.indexOf(e);
+      switch (e.type) {
+        case 'goblin': {
+          // Double strike — two quick hits at 60% each
+          const d1 = Player.takeDamage(Math.ceil(e.atk * 0.6));
+          const d2 = Player.takeDamage(Math.ceil(e.atk * 0.6));
+          Camera.shake(3); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, d1, false);
+          this._updateUI();
+          this._log(`${e.name} Double Strike! (${d1}+${d2} dmg)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#ffaa44'); return;
+        }
+        case 'skeleton': {
+          // MP Drain
+          const drained = Math.min(Player.mp, Math.ceil(e.atk * 0.5));
+          Player.mp = Math.max(0, Player.mp - drained);
+          this._updateUI();
+          this._log(`${e.name} drains ${drained} MP!`, next, '#aa88ff'); return;
+        }
+        case 'orc': {
+          // Rage — 150% damage hit
+          const dmgR = Player.takeDamage(Math.ceil(e.atk * 1.5));
+          Camera.shake(6); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, dmgR, false);
+          this._updateUI();
+          this._log(`${e.name} RAGES! (${dmgR} dmg)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#ff6622'); return;
+        }
+        case 'troll': {
+          // Regenerate HP
+          const heal = Math.ceil(e.maxHp * 0.12);
+          e.hp = Math.min(e.maxHp, e.hp + heal);
+          this._updateUI();
+          this._log(`${e.name} regenerates ${heal} HP!`, next, '#44ff88'); return;
+        }
+        case 'wolf': {
+          // Pounce — ignores player DEF
+          const pDmg = Math.max(1, e.atk - (Player.guarding ? Math.floor(e.atk * 0.3) : 0));
+          Player.hp = Math.max(0, Player.hp - pDmg);
+          Camera.shake(5); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, pDmg, false);
+          this._updateUI();
+          this._log(`${e.name} POUNCES! (${pDmg} dmg, ignores DEF)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#ffcc44'); return;
+        }
+        case 'demon': {
+          // Burning curse
+          if (!Player.statusEffects) Player.statusEffects = {};
+          Player.statusEffects.burning = (Player.statusEffects.burning || 0) + 2;
+          Player.statusEffects.burnDmg = Math.ceil(e.atk * 0.25);
+          const bDmg = Player.takeDamage(Math.ceil(e.atk * 0.7));
+          Camera.shake(4); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, bDmg, false);
+          this._updateUI();
+          this._log(`${e.name} curses you with fire! (${bDmg} dmg + burning)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#ff4400'); return;
+        }
+        case 'vampire': {
+          // Life drain — heals self
+          const vDmg = Player.takeDamage(Math.ceil(e.atk * 0.8));
+          const vHeal = Math.ceil(vDmg * 0.6);
+          e.hp = Math.min(e.maxHp, e.hp + vHeal);
+          Camera.shake(4); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, vDmg, false);
+          this._updateUI();
+          this._log(`${e.name} drains your life! (${vDmg} dmg, heals ${vHeal})`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#cc2244'); return;
+        }
+        case 'wraith': {
+          // Soul rend — heavy MP drain + small HP damage
+          const wMp = Math.min(Player.mp, Math.ceil(e.atk * 0.8));
+          Player.mp = Math.max(0, Player.mp - wMp);
+          const wDmg = Player.takeDamage(Math.ceil(e.atk * 0.4));
+          Camera.shake(3); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, wDmg, false);
+          this._updateUI();
+          this._log(`${e.name} Soul Rend! -${wMp} MP, -${wDmg} HP`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#8844cc'); return;
+        }
+        case 'gargoyle': {
+          // Stone skin — temporarily boost DEF this turn, then attack
+          const origDef = e.def;
+          e.def = Math.ceil(e.def * 1.6);
+          const gDmg = Player.takeDamage(e.atk);
+          e.def = origDef;
+          Camera.shake(4); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, gDmg, false);
+          this._updateUI();
+          this._log(`${e.name} Stone Skin! Hardened strike (${gDmg} dmg)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#70a0b0'); return;
+        }
+        case 'ogre': {
+          // Ground slam — massive single hit
+          const oDmg = Player.takeDamage(Math.ceil(e.atk * 1.8));
+          Camera.shake(8); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, oDmg, false);
+          this._updateUI();
+          this._log(`${e.name} GROUND SLAM! (${oDmg} dmg)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#cc6622'); return;
+        }
+        case 'lich': {
+          // Soul drain + stun (freeze player MP regen a bit)
+          const lDmg = Player.takeDamage(Math.ceil(e.atk * 1.2));
+          const lMp = Math.min(Player.mp, 15);
+          Player.mp = Math.max(0, Player.mp - lMp);
+          Camera.shake(7); flashScreen();
+          FEBattle.triggerEnemyAttack(ei, lDmg, false);
+          this._updateUI();
+          this._log(`The Lich casts VOID REND! (${lDmg} dmg, -${lMp} MP)`, () => {
+            if (Player.hp <= 0) { this._lose(); return; } next();
+          }, '#cc44ff'); return;
+        }
+      }
+    }
+
+    // Standard attack
     const dmg = Player.takeDamage(e.atk);
     const ei = this.enemies.indexOf(e);
     Camera.shake(4); flashScreen();
@@ -4211,9 +4730,11 @@ const BattleSystem = {
     } else {
       potions.forEach(({item}) => {
         const ri=Player.inventory.findIndex(inv=>inv.item===item);
+        const hpFull=Player.hp>=Player.maxHp, mpFull=Player.mp>=Player.maxMp;
+        const wasted=(item.hp>0&&item.mp===0&&hpFull)||(item.mp>0&&item.hp===0&&mpFull)||(item.hp>0&&item.mp>0&&hpFull&&mpFull);
         const b=document.createElement('button');
-        b.className='battle-sub-btn';
-        b.textContent=(item.icon||'')+' '+item.name;
+        b.className='battle-sub-btn'+(wasted?' insufficient':'');
+        b.textContent=(item.icon||'')+' '+item.name+(wasted?' (FULL)':'');
         b.onclick=()=>this._useItem(ri);
         sub.appendChild(b);
       });
@@ -4228,6 +4749,10 @@ const BattleSystem = {
   _useItem(idx) {
     if (idx<0||idx>=Player.inventory.length) { this._showMenu(); return; }
     const {item}=Player.inventory[idx];
+    const hpFull=Player.hp>=Player.maxHp, mpFull=Player.mp>=Player.maxMp;
+    if(item.hp>0 && item.mp===0 && hpFull){ this._log('HP is already full!', ()=>this._showMenu(), '#ff8888'); return; }
+    if(item.mp>0 && item.hp===0 && mpFull){ this._log('MP is already full!', ()=>this._showMenu(), '#ff8888'); return; }
+    if(item.hp>0 && item.mp>0 && hpFull && mpFull){ this._log('HP and MP are already full!', ()=>this._showMenu(), '#ff8888'); return; }
     Player.useItem(idx);
     this._updateUI(); this._renderAllSprites();
     this._log('Used '+(item.icon||'')+' '+item.name+'!', () => this._enemyTurn());
@@ -4239,9 +4764,14 @@ const BattleSystem = {
       return;
     }
     if (this._busy) return;
+    // 1/2/3 always trigger skills directly, regardless of menu phase
+    if (key==='1'||key==='2'||key==='3') {
+      const slot = parseInt(key)-1;
+      if (Player.skills[slot]) { this._useSkill(slot); return; }
+    }
     if (this._phase==='menu') {
-      if (key==='ArrowLeft'||key==='a'||key==='A') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
-      if (key==='ArrowRight'||key==='d'||key==='D') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
+      if (key==='ArrowLeft'||key==='ArrowUp') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
+      if (key==='ArrowRight'||key==='ArrowDown') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
       const actions=['attack','skills','item','guard'];
       const sel=()=>{
         const a=actions[this._cursor];
@@ -4251,10 +4781,11 @@ const BattleSystem = {
         else if (a==='guard')  this._guard();
       };
       if (key===' '||key==='Enter') { sel(); return; }
-      if (key==='1') { this._cursor=0; sel(); return; }
-      if (key==='2') { this._cursor=1; sel(); return; }
-      if (key==='3') { this._cursor=2; sel(); return; }
-      if (key==='4') { this._cursor=3; sel(); return; }
+      // Letter shortcuts: A=attack, S=skills, I=item, G=guard
+      if (key==='a'||key==='A') { this._attack(); return; }
+      if (key==='s'||key==='S') { this._showSkills(); return; }
+      if (key==='i'||key==='I') { this._showItems(); return; }
+      if (key==='g'||key==='G') { this._guard(); return; }
     }
     if (this._phase==='skills'||this._phase==='items') {
       if (key==='Escape'||key==='q'||key==='Q') this._showMenu();
@@ -4530,11 +5061,25 @@ const UIManager = {
       const slot=Player.equipment[s.key];
       const eq=slot?.item||null;
       const d=document.createElement('div'); d.className='equip-slot';
-      d.innerHTML=`<div class="equip-icon">${eq?eq.icon:s.icon}</div><div class="equip-info">
+      d.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+      d.innerHTML=`<div class="equip-icon">${eq?eq.icon:s.icon}</div><div class="equip-info" style="flex:1">
         <div class="equip-lbl">${s.label}</div><div class="equip-name" style="${slot?`color:${RARITY_COLOR[slot.rarity]||'#fff'}`:'color:#555'}">${eq?eq.name:'— none —'}</div>
         <div class="equip-stat">${eq?(eq.atk?`+${eq.atk} ATK`:`+${eq.def} DEF${eq.hp?` +${eq.hp} HP`:''}`):''}
         </div></div>`;
+      if(eq){
+        const btn=document.createElement('button');
+        btn.className='item-btn danger';
+        btn.style.cssText='font-size:6px;padding:3px 6px;min-height:unset;';
+        btn.textContent='REMOVE';
+        btn.onclick=()=>this.doUnequip(s.key);
+        d.appendChild(btn);
+      }
       c.appendChild(d);
+    }
+  },
+  doUnequip(slot){
+    if(Player.unequipItem(slot)){
+      this.updateEquipment(); this.renderInventory(); this.updateStats();
     }
   },
   updateGold(){ document.getElementById('gold-display').textContent=`💰 ${Player.gold} GOLD`; },
@@ -4951,7 +5496,7 @@ const Game = {
     if(tile===T.STAIRS||tile===T.EXIT){
       if(!GameState.onStairs){
         GameState.onStairs=true;
-        Logger.add(`Press [E] to ${tile===T.EXIT?'escape through the portal!':'descend to floor '+(GameState.floor+1)+'.'}`, 'info');
+        Logger.add(`Press [E] to ${tile===T.EXIT?'escape through the portal!':GameState.floor>=MAX_FLOOR?'... (stairs are sealed — defeat the Lich first!)':'descend to floor '+(GameState.floor+1)+'.'}`, tile===T.EXIT?'info':GameState.floor>=MAX_FLOOR?'warn':'info');
       }
     } else {
       GameState.onStairs=false;
@@ -4977,6 +5522,11 @@ const Game = {
     const idx=Player.inventory.findIndex(e=>e.item.type==='potion');
     if(idx===-1){ Logger.add('No potions in inventory!','warn'); return; }
     const item=Player.inventory[idx].item;
+    // Block if potion would have no effect
+    const hpFull = Player.hp>=Player.maxHp, mpFull = Player.mp>=Player.maxMp;
+    if(item.hp>0 && item.mp===0 && hpFull){ Logger.add('HP is already full!','warn'); return; }
+    if(item.mp>0 && item.hp===0 && mpFull){ Logger.add('MP is already full!','warn'); return; }
+    if(item.hp>0 && item.mp>0 && hpFull && mpFull){ Logger.add('HP and MP are already full!','warn'); return; }
     Player.useItem(idx);
     Logger.add(`Quick-used: ${item.icon} ${item.name}`,'heal');
     UIManager.updateAll();
@@ -4986,6 +5536,8 @@ const Game = {
     if(GameState.onStairs){
       const tile=MapGen.tiles[Player.y][Player.x];
       if(tile===T.EXIT){ this.endTurn(); if(Player.hp>0) UIManager.showVictory(); return; }
+      // Stairs on the final floor lead nowhere — player must find the EXIT portal
+      if(GameState.floor>=MAX_FLOOR){ Logger.add('A dead end. Defeat the Lich to open the exit.','warn'); return; }
       this.endTurn(); if(Player.hp>0) this.nextFloor(); return;
     }
     const m=EntityManager.merchant;
@@ -5003,7 +5555,7 @@ const Game = {
     }
     if(GameState.isPaused) return;
     GameState.turnCount++;
-    // Apply burning DoT
+    // Apply burning DoT — enemies
     for(const e of EntityManager.enemies){
       if(!e.alive||!e.statusEffects?.burning) continue;
       const bDmg=e.statusEffects.burnDmg||1;
@@ -5011,6 +5563,15 @@ const Game = {
       e.statusEffects.burning--;
       Floaters.add(e.x,e.y,bDmg,'#ff6600');
       if(e.hp<=0){ e.alive=false; e.deathFlash=8; e._rewarded=true; Audio.play('death'); GameState.stats.enemiesKilled++; Player.gainExp(e.exp); Player.gainGold(rng(...e.gold)); Logger.add(`${e.name} burned to death!`,'warn'); CombatSystem._drop(e); }
+    }
+    // Apply burning DoT — player
+    if(Player.statusEffects?.burning>0){
+      const pBDmg=Player.statusEffects.burnDmg||1;
+      Player.hp=Math.max(0,Player.hp-pBDmg);
+      Player.statusEffects.burning--;
+      Floaters.add(Player.x,Player.y,pBDmg,'#ff4400');
+      Logger.add(`You are BURNING! (-${pBDmg} HP)`,'warn');
+      if(Player.statusEffects.burning<=0) Logger.add('Burn faded.','dim');
     }
     if(GameState.state!=='BATTLE'){
       EntityManager.moveEnemies();
