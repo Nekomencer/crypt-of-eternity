@@ -226,6 +226,9 @@
   /* FLOOR ANNOUNCE */
   #floor-announce { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; color:var(--gold); text-shadow:0 0 20px #f5c842aa; pointer-events:none; z-index:300; opacity:0; transition:opacity 1.2s; }
   #floor-announce.active { opacity:1; transition:opacity 0s; }
+  /* TOAST NOTIFICATION */
+  #game-toast { position:fixed; top:38%; left:50%; transform:translate(-50%,-50%); font-size:13px; font-weight:bold; pointer-events:none; z-index:400; opacity:0; transition:opacity 1.2s; text-shadow:0 0 12px currentColor; text-align:center; }
+  #game-toast.active { opacity:1; transition:opacity 0s; }
 
   /* SKILL MANAGER in inventory */
   #skill-manager { display:flex; flex-direction:column; gap:6px; }
@@ -452,6 +455,7 @@
     font-family:var(--font-main); font-size:8px; cursor:pointer;
   }
   #settings-btn:hover { border-color:var(--white); color:var(--white); }
+  #settings-overlay { z-index: 120; }
 
   @media (max-width: 700px) {
     #dpad { display: grid; }
@@ -709,6 +713,7 @@
 </div>
 
 <div id="floor-announce"></div>
+<div id="game-toast"></div>
 
 <div id="flash"></div>
 
@@ -742,7 +747,7 @@
     <button class="battle-btn" data-idx="0">ATTACK</button>
     <button class="battle-btn" data-idx="1">SKILLS</button>
     <button class="battle-btn" data-idx="2">ITEM</button>
-    <button class="battle-btn" data-idx="3">FLEE (4MP)</button>
+    <button class="battle-btn" data-idx="3">GUARD</button>
   </div>
   <div id="battle-sub-menu" class="hidden"></div>
 </div>
@@ -1070,7 +1075,7 @@ const Logger = {
 // ============================================================
 const Player = {
   x:2,y:2,hp:30,maxHp:30,mp:30,maxMp:30,atk:5,def:0,
-  level:1,exp:0,expNext:100,gold:0,
+  level:1,exp:0,expNext:100,gold:0,guarding:false,
   inventory:[],equipment:{weapon:null,armor:null},
   skills:[null,null,null],knownSkills:[],
   passive:null, evasionTurns:0, atkBuffAmt:0, atkBuffTurns:0, manaShield:false,
@@ -1086,6 +1091,8 @@ const Player = {
     if(this.evasionTurns>0){ this.evasionTurns--; Logger.add('Evaded!','heal'); return 0; }
     if(this.passive==='swift'&&Math.random()<0.25){ Logger.add('Swift dodge!','heal'); return 0; }
     let v=Math.max(1,d-this.totalDef);
+    // Guard: halves incoming damage for this turn
+    if(this.guarding){ this.guarding=false; v=Math.max(1,Math.floor(v*0.5)); Logger.add('🛡 Guard halved the damage!','heal'); }
     // Mana shield absorbs damage using MP
     if(this.manaShield&&this.mp>0){ const mpUsed=Math.min(this.mp,v); v-=mpUsed; this.mp-=mpUsed; Logger.add(`Mana Shield absorbed ${mpUsed} dmg!`,'info'); if(v<=0){ this.manaShield=false; return 0; } this.manaShield=false; }
     // Fortitude: take 1 less damage
@@ -2656,8 +2663,10 @@ const CombatSystem = {
     }
 
     const rarity=this._rarity(floor);
-    if(!Player.addItem(this._scale(item,rarity,floor),rarity))
+    if(!Player.addItem(this._scale(item,rarity,floor),rarity)){
       Logger.add(`Inventory full — item lost: ${item.icon} ${item.name}`,'warn');
+      UIManager.showToast('⚠ INVENTORY FULL\nItem was lost!', '#ff6666');
+    }
     else {
       Audio.play('loot');
       Logger.addHTML(`Dropped: ${item.icon} <span style="color:${RARITY_COLOR[rarity]||'#aaa'}">${item.name}</span> <span style="color:#666">(${rarity})</span>`,'loot');
@@ -2736,7 +2745,7 @@ const MerchantSystem = {
       Player.spendGold(e.price); Player.learnSkill(e.item.skill);
       Logger.add(`Bought ${e.item.name}!`,'skill');
     } else {
-      if(Player.inventory.length>=INV_MAX){ Logger.add('Inventory full!','warn'); return; }
+      if(Player.inventory.length>=INV_MAX){ Logger.add('Inventory full!','warn'); UIManager.showToast('⚠ INVENTORY FULL!', '#ff6666'); return; }
       Audio.play('buy'); Player.spendGold(e.price); Player.addItem(e.item,e.rarity);
       Logger.add(`Bought ${e.item.icon} ${e.item.name}!`,'loot');
     }
@@ -3003,7 +3012,6 @@ const BattleSystem = {
   _hurtTimers: {},
   _playerHurt: 0,
   _playerSwing: 0,
-  _fleeCooldown: 0,
 
   get enemy() { return this._firstAlive(); },
   _aliveEnemies() { return this.enemies.filter(e => e.alive); },
@@ -3023,7 +3031,7 @@ const BattleSystem = {
 
     this.ambush = options.ambush || false;
     this._busy = false; this._cursor = 0;
-    this._phase = 'menu'; this._logCb = null; this._fleeCooldown = 0;
+    this._phase = 'menu'; this._logCb = null; Player.guarding = false;
     this._hurtTimers = {};
     clearTimeout(this._logTimer);
 
@@ -3087,6 +3095,10 @@ const BattleSystem = {
     document.getElementById('battle-sub-menu').classList.add('hidden');
     document.getElementById('battle-log-text').textContent = 'Choose an action.';
     this._setMenuDisabled(false);
+    // Wire click/tap handlers for each battle button
+    document.querySelectorAll('#battle-menu .battle-btn').forEach((b, i) => {
+      b.onclick = () => { if (b.disabled) return; this._cursor = i; this.onKey('Enter'); };
+    });
   },
 
   _highlightMenu() {
@@ -3232,7 +3244,6 @@ const BattleSystem = {
   },
 
   _enemyTurn() {
-    if (this._fleeCooldown > 0) this._fleeCooldown--;
     const alive = this._aliveEnemies();
     if (!alive.length) { this._showMenu(); return; }
     this._doEnemyAttacks(alive, 0);
@@ -3326,36 +3337,13 @@ const BattleSystem = {
     });
   },
 
-  _flee() {
-    const FLEE_MP_COST=4;
-    if (this._fleeCooldown>0) {
-      this._log("Can't flee yet — wait "+this._fleeCooldown+" turn(s).",null,'#ff6666'); return;
+  _guard() {
+    if (Player.guarding) {
+      this._log('Already guarding this turn!', null, '#ffaa44'); return;
     }
-    if (Player.mp<FLEE_MP_COST) {
-      this._log("Not enough MP to flee! (costs "+FLEE_MP_COST+" MP)",null,'#ff6666'); return;
-    }
-    Player.mp-=FLEE_MP_COST; UIManager.updateVitals();
-    this._busy=true; this._setMenuDisabled(true);
-    const eFloor=ENEMY_DEFS[this.enemies[0]?.type]?.floor||1;
-    const chance=clamp(0.55-(GameState.floor-eFloor)*0.08,0.15,0.80);
-    if (Math.random()<chance) {
-      this._log('Fled successfully!', () => {
-        this._flash(() => {
-          BattleRenderer.stopLoop(); BattleMusic.stop();
-          document.getElementById('battle-screen').classList.remove('active');
-          document.getElementById('dpad').style.visibility='';
-          document.getElementById('action-btns').style.visibility='';
-          GameState.state='EXPLORE';
-          GameState.lastBattleEnd=performance.now();
-          this.enemies=[];
-          UIManager.updateAll(); Renderer.draw(); PulseLoop.start();
-          Game.endTurn();
-        });
-      });
-    } else {
-      this._fleeCooldown=2;
-      this._log("Couldn't escape!", () => this._enemyTurn());
-    }
+    Player.guarding = true;
+    this._busy = true; this._setMenuDisabled(true);
+    this._log('🛡 You take a defensive stance! Incoming damage halved.', () => this._enemyTurn(), '#88ccff');
   },
 
   _showSkills() {
@@ -3448,13 +3436,13 @@ const BattleSystem = {
     if (this._phase==='menu') {
       if (key==='ArrowLeft'||key==='a'||key==='A') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
       if (key==='ArrowRight'||key==='d'||key==='D') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
-      const actions=['attack','skills','item','flee'];
+      const actions=['attack','skills','item','guard'];
       const sel=()=>{
         const a=actions[this._cursor];
         if (a==='attack') this._attack();
         else if (a==='skills') this._showSkills();
         else if (a==='item')   this._showItems();
-        else if (a==='flee')   this._flee();
+        else if (a==='guard')  this._guard();
       };
       if (key===' '||key==='Enter') { sel(); return; }
       if (key==='1') { this._cursor=0; sel(); return; }
@@ -3682,6 +3670,16 @@ const Renderer = {
 //  UIManager
 // ============================================================
 const UIManager = {
+  _toastTimer: null,
+  showToast(msg, color='#ff6666') {
+    const t = document.getElementById('game-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.color = color;
+    t.classList.add('active');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => t.classList.remove('active'), 1800);
+  },
   updateAll(){ this.updateVitals(); this.updateStats(); this.updateSkills(); this.updateEquipment(); this.updateGold(); },
   updateVitals(){
     const mhp=Player.totalMaxHp;
