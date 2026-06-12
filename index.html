@@ -1937,105 +1937,414 @@ const TilePainter = {
     ctx.imageSmoothingEnabled = false;
     const ang = animState.swingAngle || 0;
     const hurt = animState.hurtAlpha || 0;
+    const cls = Player.passive === 'arcane' ? 'mage' : Player.passive === 'swift' ? 'rogue' : 'warrior';
 
-    // Shadow
+    // ── Shadow (all classes) ──
     ctx.save(); ctx.globalAlpha = 0.30;
     ctx.fillStyle = '#000';
     ctx.beginPath(); ctx.ellipse(Math.floor(W*0.50), Math.floor(H*0.93), Math.floor(W*0.22), Math.floor(H*0.04), 0, 0, Math.PI*2); ctx.fill();
     ctx.restore();
 
-    // Cape (dark navy, behind body)
-    ctx.fillStyle = '#1a2850';
-    ctx.beginPath();
-    ctx.moveTo(Math.floor(W*0.38), Math.floor(H*0.36));
-    ctx.lineTo(Math.floor(W*0.28), Math.floor(H*0.56));
-    ctx.lineTo(Math.floor(W*0.34), Math.floor(H*0.74));
-    ctx.lineTo(Math.floor(W*0.65), Math.floor(H*0.74));
-    ctx.lineTo(Math.floor(W*0.70), Math.floor(H*0.56));
-    ctx.lineTo(Math.floor(W*0.62), Math.floor(H*0.36));
-    ctx.closePath(); ctx.fill();
+    if (cls === 'mage') {
+      // ══════════════════════════════════════════
+      //  MAGE — purple robes, wizard hat, staff
+      // ══════════════════════════════════════════
 
-    // Boots
-    ctx.fillStyle = '#3a2010';
-    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
-    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
-    ctx.fillStyle = '#5a3820';
-    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), 2);
-    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), 2);
+      // Robe (flows to ground, no legs visible)
+      ctx.fillStyle = '#3a1870';
+      ctx.fillRect(Math.floor(W*0.28), Math.floor(H*0.52), Math.floor(W*0.44), Math.floor(H*0.41));
+      // Robe side folds
+      ctx.fillStyle = '#2a1050';
+      ctx.fillRect(Math.floor(W*0.28), Math.floor(H*0.54), Math.floor(W*0.05), Math.floor(H*0.38));
+      ctx.fillRect(Math.floor(W*0.67), Math.floor(H*0.54), Math.floor(W*0.05), Math.floor(H*0.38));
+      // Robe centre highlight
+      ctx.fillStyle = '#5a28a8';
+      ctx.fillRect(Math.floor(W*0.45), Math.floor(H*0.53), Math.floor(W*0.10), Math.floor(H*0.39));
+      // Robe bottom gold trim
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(W*0.26), Math.floor(H*0.90), Math.floor(W*0.48), Math.floor(H*0.03));
+      ctx.fillStyle = '#f0c840';
+      ctx.fillRect(Math.floor(W*0.28), Math.floor(H*0.90), Math.floor(W*0.44), 2);
 
-    // Legs
-    ctx.fillStyle = '#1e3060';
-    ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
-    ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
+      // Torso / upper robe
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.36), Math.floor(W*0.34), Math.floor(H*0.18));
+      // Gold collar/clasp
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(W*0.42), Math.floor(H*0.36), Math.floor(W*0.16), Math.floor(H*0.04));
+      ctx.fillStyle = '#f0c840';
+      ctx.fillRect(Math.floor(W*0.48), Math.floor(H*0.38), Math.floor(W*0.04), Math.floor(H*0.05));
+      // Rune glyph on chest
+      ctx.fillStyle = '#9b5de5';
+      ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.10));
+      ctx.fillStyle = '#c8a8ff';
+      ctx.fillRect(Math.floor(W*0.49), Math.floor(H*0.43), 2, Math.floor(H*0.08));
+      ctx.fillRect(Math.floor(W*0.45), Math.floor(H*0.47), Math.floor(W*0.10), 2);
 
-    // Belt
-    ctx.fillStyle = '#5a3010';
-    ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.60), Math.floor(W*0.34), Math.floor(H*0.04));
-    ctx.fillStyle = '#c89a30';
-    ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.60), Math.floor(W*0.06), Math.floor(H*0.04));
+      // Left sleeve + glowing orb hand
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(Math.floor(W*0.16), Math.floor(H*0.38), Math.floor(W*0.18), Math.floor(H*0.22));
+      // Orb glow halo
+      ctx.save(); ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#4488ff';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.18), Math.floor(H*0.64), Math.floor(W*0.12), 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      // Orb core
+      ctx.fillStyle = '#6699ff';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.18), Math.floor(H*0.64), Math.floor(W*0.07), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#aaccff';
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.62), 5, 5);
 
-    // Torso
-    ctx.fillStyle = PAL.playerBody;
-    ctx.fillRect(Math.floor(W*0.36), Math.floor(H*0.37), Math.floor(W*0.28), Math.floor(H*0.25));
-    ctx.fillStyle = '#888090';
-    ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.38), Math.floor(W*0.12), Math.floor(H*0.23));
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(Math.floor(W*0.44), Math.floor(H*0.38), Math.floor(W*0.12), 2);
+      // Right arm + staff (animated)
+      ctx.save();
+      const mPivX = Math.floor(W*0.66), mPivY = Math.floor(H*0.40);
+      ctx.translate(mPivX, mPivY); ctx.rotate(ang * 0.6); ctx.translate(-mPivX, -mPivY);
+      // Sleeve
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.38), Math.floor(W*0.14), Math.floor(H*0.22));
+      // Staff shaft
+      ctx.fillStyle = '#4a2e18';
+      ctx.fillRect(Math.floor(W*0.70), Math.floor(H*0.12), Math.floor(W*0.05), Math.floor(H*0.60));
+      ctx.fillStyle = '#6a4828';
+      ctx.fillRect(Math.floor(W*0.70), Math.floor(H*0.12), 2, Math.floor(H*0.60));
+      // Crystal orb at top — glow
+      ctx.save(); ctx.globalAlpha = 0.40;
+      ctx.fillStyle = '#cc88ff';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.725), Math.floor(H*0.10), Math.floor(W*0.10), 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      // Crystal orb core
+      ctx.fillStyle = '#9b5de5';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.725), Math.floor(H*0.10), Math.floor(W*0.07), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#d4aaff';
+      ctx.fillRect(Math.floor(W*0.705), Math.floor(H*0.07), 4, 4);
+      ctx.restore();
 
-    // Shoulder pauldrons
-    ctx.fillStyle = '#707080';
-    ctx.fillRect(Math.floor(W*0.30), Math.floor(H*0.37), Math.floor(W*0.08), Math.floor(H*0.10));
-    ctx.fillRect(Math.floor(W*0.62), Math.floor(H*0.37), Math.floor(W*0.08), Math.floor(H*0.10));
-    ctx.fillStyle = '#c8c0d0';
-    ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.40), 2, 2); ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.44), 2, 2);
-    ctx.fillRect(Math.floor(W*0.65), Math.floor(H*0.40), 2, 2); ctx.fillRect(Math.floor(W*0.65), Math.floor(H*0.44), 2, 2);
+      // Head — face
+      const mhx = Math.floor(W*0.37), mhy = Math.floor(H*0.13);
+      const mhw = Math.floor(W*0.26), mhh = Math.floor(H*0.24);
+      // Pale mage skin
+      ctx.fillStyle = '#e8d0b0';
+      ctx.fillRect(mhx, mhy, mhw, mhh);
+      // Glowing blue eyes
+      ctx.fillStyle = '#4488ff';
+      ctx.fillRect(mhx + Math.floor(mhw*0.22), mhy + Math.floor(mhh*0.48), 5, 4);
+      ctx.fillRect(mhx + Math.floor(mhw*0.64), mhy + Math.floor(mhh*0.48), 5, 4);
+      ctx.fillStyle = '#aaccff';
+      ctx.fillRect(mhx + Math.floor(mhw*0.23), mhy + Math.floor(mhh*0.49), 2, 2);
+      ctx.fillRect(mhx + Math.floor(mhw*0.65), mhy + Math.floor(mhh*0.49), 2, 2);
+      // Beard/mouth
+      ctx.fillStyle = '#888090';
+      ctx.fillRect(mhx + Math.floor(mhw*0.28), mhy + Math.floor(mhh*0.75), Math.floor(mhw*0.44), Math.floor(mhh*0.20));
+      ctx.fillStyle = '#aaa0b0';
+      ctx.fillRect(mhx + Math.floor(mhw*0.30), mhy + Math.floor(mhh*0.76), Math.floor(mhw*0.40), 3);
+      // Hat brim
+      ctx.fillStyle = '#1e0a50';
+      ctx.fillRect(mhx - Math.floor(mhw*0.18), mhy - Math.floor(mhh*0.05), Math.floor(mhw*1.36), Math.floor(mhh*0.12));
+      ctx.fillStyle = '#9b5de5';
+      ctx.fillRect(mhx - Math.floor(mhw*0.16), mhy - Math.floor(mhh*0.04), Math.floor(mhw*1.32), 2);
+      // Hat cone
+      ctx.fillStyle = '#2a1080';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), mhy - Math.floor(H*0.18));
+      ctx.lineTo(mhx - Math.floor(mhw*0.15), mhy - Math.floor(mhh*0.02));
+      ctx.lineTo(mhx + mhw + Math.floor(mhw*0.15), mhy - Math.floor(mhh*0.02));
+      ctx.closePath(); ctx.fill();
+      // Hat highlight stripe
+      ctx.fillStyle = '#4a20a0';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), mhy - Math.floor(H*0.18));
+      ctx.lineTo(Math.floor(W*0.48), mhy - Math.floor(mhh*0.02));
+      ctx.lineTo(Math.floor(W*0.50), mhy - Math.floor(mhh*0.02));
+      ctx.closePath(); ctx.fill();
+      // Star on hat
+      ctx.fillStyle = '#f5c842';
+      ctx.fillRect(Math.floor(W*0.48), mhy - Math.floor(H*0.12), 4, 4);
+      ctx.fillRect(Math.floor(W*0.46), mhy - Math.floor(H*0.10), 8, 2);
+      ctx.fillRect(Math.floor(W*0.49), mhy - Math.floor(H*0.13), 2, 8);
 
-    // Left arm + shield
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(Math.floor(W*0.21), Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
-    ctx.fillStyle = '#8890a8';
-    ctx.fillRect(Math.floor(W*0.11), Math.floor(H*0.40), Math.floor(W*0.13), Math.floor(H*0.22));
-    ctx.strokeStyle = '#505868'; ctx.lineWidth = 2;
-    ctx.strokeRect(Math.floor(W*0.11), Math.floor(H*0.40), Math.floor(W*0.13), Math.floor(H*0.22));
-    ctx.fillStyle = '#b0b8c8';
-    ctx.fillRect(Math.floor(W*0.17), Math.floor(H*0.42), 2, Math.floor(H*0.18));
-    ctx.fillRect(Math.floor(W*0.12), Math.floor(H*0.51), Math.floor(W*0.11), 2);
+    } else if (cls === 'rogue') {
+      // ══════════════════════════════════════════
+      //  ROGUE — dark hood, leather, daggers
+      // ══════════════════════════════════════════
 
-    // Right arm + sword (rotated by swing angle)
-    ctx.save();
-    const pivX = Math.floor(W*0.65), pivY = Math.floor(H*0.42);
-    ctx.translate(pivX, pivY); ctx.rotate(ang); ctx.translate(-pivX, -pivY);
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(pivX, Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
-    ctx.fillStyle = '#6a3810';
-    ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.59), Math.floor(W*0.04), Math.floor(H*0.07));
-    ctx.fillStyle = '#888090';
-    ctx.beginPath(); ctx.arc(Math.floor(W*0.70), Math.floor(H*0.67), Math.floor(W*0.03), 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#9b5de5';
-    ctx.fillRect(Math.floor(W*0.64), Math.floor(H*0.57), Math.floor(W*0.12), Math.floor(H*0.025));
-    ctx.fillStyle = '#c8d8e8';
-    ctx.fillRect(Math.floor(W*0.69), Math.floor(H*0.27), Math.floor(W*0.024), Math.floor(H*0.31));
-    ctx.fillStyle = '#e8f0f8';
-    ctx.fillRect(Math.floor(W*0.69), Math.floor(H*0.27), 2, Math.floor(H*0.31));
-    ctx.restore();
+      // Dark shadow cloak behind everything
+      ctx.fillStyle = '#08060e';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.40), Math.floor(H*0.33));
+      ctx.lineTo(Math.floor(W*0.20), Math.floor(H*0.65));
+      ctx.lineTo(Math.floor(W*0.28), Math.floor(H*0.82));
+      ctx.lineTo(Math.floor(W*0.72), Math.floor(H*0.82));
+      ctx.lineTo(Math.floor(W*0.80), Math.floor(H*0.65));
+      ctx.lineTo(Math.floor(W*0.60), Math.floor(H*0.33));
+      ctx.closePath(); ctx.fill();
 
-    // Head
-    const hx = Math.floor(W*0.37), hy = Math.floor(H*0.08);
-    const hw = Math.floor(W*0.26), hh = Math.floor(H*0.28);
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(hx, hy, hw, hh);
-    ctx.fillStyle = PAL.playerHair;
-    ctx.fillRect(hx, hy, hw, Math.floor(hh*0.30));
-    ctx.fillRect(hx, hy + Math.floor(hh*0.30), Math.floor(hw*0.16), Math.floor(hh*0.22));
-    ctx.fillRect(hx + Math.floor(hw*0.84), hy + Math.floor(hh*0.30), Math.floor(hw*0.16), Math.floor(hh*0.22));
-    ctx.fillStyle = '#201808';
-    ctx.fillRect(hx + Math.floor(hw*0.35) - 2, hy + Math.floor(hh*0.55), 4, 3);
-    ctx.fillRect(hx + Math.floor(hw*0.65) - 2, hy + Math.floor(hh*0.55), 4, 3);
-    ctx.fillRect(hx + Math.floor(hw*0.50) - 1, hy + Math.floor(hh*0.65), 2, 2);
-    ctx.fillStyle = '#3a2010';
-    ctx.fillRect(hx + Math.floor(hw*0.30), hy + Math.floor(hh*0.72), 3, 1);
+      // Boots (dark, pointed)
+      ctx.fillStyle = '#181010';
+      ctx.fillRect(Math.floor(W*0.29), Math.floor(H*0.79), Math.floor(W*0.19), Math.floor(H*0.15));
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.79), Math.floor(W*0.19), Math.floor(H*0.15));
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(Math.floor(W*0.29), Math.floor(H*0.79), Math.floor(W*0.19), 2);
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.79), Math.floor(W*0.19), 2);
+      // Boot buckles
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(Math.floor(W*0.34), Math.floor(H*0.81), Math.floor(W*0.06), Math.floor(H*0.025));
+      ctx.fillRect(Math.floor(W*0.60), Math.floor(H*0.81), Math.floor(W*0.06), Math.floor(H*0.025));
 
-    // Hurt flash
+      // Legs (tight dark leather)
+      ctx.fillStyle = '#1a1520';
+      ctx.fillRect(Math.floor(W*0.31), Math.floor(H*0.62), Math.floor(W*0.17), Math.floor(H*0.19));
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.62), Math.floor(W*0.17), Math.floor(H*0.19));
+      // Knee pads
+      ctx.fillStyle = '#302830';
+      ctx.fillRect(Math.floor(W*0.31), Math.floor(H*0.66), Math.floor(W*0.17), Math.floor(H*0.05));
+      ctx.fillRect(Math.floor(W*0.52), Math.floor(H*0.66), Math.floor(W*0.17), Math.floor(H*0.05));
+
+      // Belt + pouches
+      ctx.fillStyle = '#281a0a';
+      ctx.fillRect(Math.floor(W*0.30), Math.floor(H*0.60), Math.floor(W*0.40), Math.floor(H*0.04));
+      ctx.fillStyle = '#504030';
+      ctx.fillRect(Math.floor(W*0.36), Math.floor(H*0.59), Math.floor(W*0.07), Math.floor(H*0.05));
+      ctx.fillRect(Math.floor(W*0.57), Math.floor(H*0.59), Math.floor(W*0.07), Math.floor(H*0.05));
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(Math.floor(W*0.37), Math.floor(H*0.60), Math.floor(W*0.05), Math.floor(H*0.03));
+      ctx.fillRect(Math.floor(W*0.58), Math.floor(H*0.60), Math.floor(W*0.05), Math.floor(H*0.03));
+
+      // Torso (tight leather armour)
+      ctx.fillStyle = '#1c1820';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.36), Math.floor(W*0.34), Math.floor(H*0.26));
+      // Leather plate panels
+      ctx.fillStyle = '#141018';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.36), Math.floor(W*0.16), Math.floor(H*0.26));
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.36), Math.floor(W*0.16), Math.floor(H*0.26));
+      // Centre spine strap
+      ctx.fillStyle = '#3a2a20';
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.37), Math.floor(W*0.06), Math.floor(H*0.24));
+      // Strap buckles
+      ctx.fillStyle = '#887060';
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.42), Math.floor(W*0.06), Math.floor(H*0.025));
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.52), Math.floor(W*0.06), Math.floor(H*0.025));
+
+      // Left arm + small buckler
+      ctx.fillStyle = '#1c1820';
+      ctx.fillRect(Math.floor(W*0.17), Math.floor(H*0.38), Math.floor(W*0.17), Math.floor(H*0.22));
+      // Buckler shield
+      ctx.fillStyle = '#282028';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.16), Math.floor(H*0.57), Math.floor(W*0.08), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#3a3040';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.16), Math.floor(H*0.57), Math.floor(W*0.05), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#887060';
+      ctx.fillRect(Math.floor(W*0.15), Math.floor(H*0.54), 2, Math.floor(H*0.06));
+      ctx.fillRect(Math.floor(W*0.12), Math.floor(H*0.56), Math.floor(W*0.08), 2);
+
+      // Right arm + dagger (animated swing)
+      ctx.save();
+      const rPivX = Math.floor(W*0.66), rPivY = Math.floor(H*0.40);
+      ctx.translate(rPivX, rPivY); ctx.rotate(ang); ctx.translate(-rPivX, -rPivY);
+      ctx.fillStyle = '#1c1820';
+      ctx.fillRect(rPivX, Math.floor(H*0.40), Math.floor(W*0.13), Math.floor(H*0.20));
+      // Dagger handle wrap
+      ctx.fillStyle = '#2a1a10';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.57), Math.floor(W*0.07), Math.floor(H*0.07));
+      ctx.fillStyle = '#554030';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.58), Math.floor(W*0.07), 2);
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.61), Math.floor(W*0.07), 2);
+      // Dagger guard
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(Math.floor(W*0.64), Math.floor(H*0.57), Math.floor(W*0.14), Math.floor(H*0.025));
+      // Dagger blade (short, wide, glinting)
+      ctx.fillStyle = '#a8b8c8';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.40), Math.floor(W*0.06), Math.floor(H*0.18));
+      ctx.fillStyle = '#d8e8f0';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.40), 2, Math.floor(H*0.18));
+      // Blade tip (pointy)
+      ctx.fillStyle = '#e8f4ff';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.40), Math.floor(W*0.06), 2);
+      ctx.restore();
+
+      // Head — dark hood with shadowed face
+      const rhx = Math.floor(W*0.35), rhy = Math.floor(H*0.06);
+      const rhw = Math.floor(W*0.30), rhh = Math.floor(H*0.30);
+      // Hood outer shape
+      ctx.fillStyle = '#0e0c16';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), rhy);
+      ctx.lineTo(rhx - Math.floor(rhw*0.10), rhy + Math.floor(rhh*0.40));
+      ctx.lineTo(rhx - Math.floor(rhw*0.20), rhy + Math.floor(rhh*1.10));
+      ctx.lineTo(rhx + rhw + Math.floor(rhw*0.20), rhy + Math.floor(rhh*1.10));
+      ctx.lineTo(rhx + rhw + Math.floor(rhw*0.10), rhy + Math.floor(rhh*0.40));
+      ctx.closePath(); ctx.fill();
+      // Face strip (lower part visible below hood)
+      ctx.fillStyle = '#c8a070';
+      ctx.fillRect(rhx + Math.floor(rhw*0.14), rhy + Math.floor(rhh*0.36), Math.floor(rhw*0.72), Math.floor(rhh*0.50));
+      // Shadow mask over upper face
+      ctx.fillStyle = 'rgba(0,0,0,0.80)';
+      ctx.fillRect(rhx + Math.floor(rhw*0.14), rhy + Math.floor(rhh*0.36), Math.floor(rhw*0.72), Math.floor(rhh*0.24));
+      // Glowing amber eyes through the mask
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(rhx + Math.floor(rhw*0.20), rhy + Math.floor(rhh*0.42), 5, 4);
+      ctx.fillRect(rhx + Math.floor(rhw*0.62), rhy + Math.floor(rhh*0.42), 5, 4);
+      ctx.fillStyle = '#ffe880';
+      ctx.fillRect(rhx + Math.floor(rhw*0.21), rhy + Math.floor(rhh*0.43), 2, 2);
+      ctx.fillRect(rhx + Math.floor(rhw*0.63), rhy + Math.floor(rhh*0.43), 2, 2);
+      // Nose/mouth
+      ctx.fillStyle = '#a07050';
+      ctx.fillRect(rhx + Math.floor(rhw*0.46), rhy + Math.floor(rhh*0.60), 3, 2);
+      ctx.fillStyle = '#804030';
+      ctx.fillRect(rhx + Math.floor(rhw*0.34), rhy + Math.floor(rhh*0.72), Math.floor(rhw*0.32), 2);
+      // Hood inner shadow
+      ctx.fillStyle = '#0e0c16';
+      ctx.fillRect(rhx - Math.floor(rhw*0.05), rhy, Math.floor(rhw*0.18), Math.floor(rhh*0.50));
+      ctx.fillRect(rhx + rhw - Math.floor(rhw*0.13), rhy, Math.floor(rhw*0.18), Math.floor(rhh*0.50));
+      // Hood top peak
+      ctx.fillStyle = '#1a1628';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.50), rhy - Math.floor(H*0.01));
+      ctx.lineTo(Math.floor(W*0.42), rhy + Math.floor(rhh*0.28));
+      ctx.lineTo(Math.floor(W*0.58), rhy + Math.floor(rhh*0.28));
+      ctx.closePath(); ctx.fill();
+
+    } else {
+      // ══════════════════════════════════════════
+      //  WARRIOR — heavy armour, helmet, sword + shield
+      // ══════════════════════════════════════════
+
+      // Cape (dark navy, behind body)
+      ctx.fillStyle = '#1a2850';
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(W*0.38), Math.floor(H*0.36));
+      ctx.lineTo(Math.floor(W*0.28), Math.floor(H*0.56));
+      ctx.lineTo(Math.floor(W*0.34), Math.floor(H*0.74));
+      ctx.lineTo(Math.floor(W*0.65), Math.floor(H*0.74));
+      ctx.lineTo(Math.floor(W*0.70), Math.floor(H*0.56));
+      ctx.lineTo(Math.floor(W*0.62), Math.floor(H*0.36));
+      ctx.closePath(); ctx.fill();
+
+      // Boots
+      ctx.fillStyle = '#3a2010';
+      ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), Math.floor(H*0.14));
+      ctx.fillStyle = '#5a3820';
+      ctx.fillRect(Math.floor(W*0.32), Math.floor(H*0.80), Math.floor(W*0.17), 2);
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.80), Math.floor(W*0.17), 2);
+
+      // Greaves (armoured legs)
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.63), Math.floor(W*0.16), Math.floor(H*0.19));
+      ctx.fillStyle = '#8890a0';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.63), Math.floor(W*0.16), 2);
+      ctx.fillRect(Math.floor(W*0.51), Math.floor(H*0.63), Math.floor(W*0.16), 2);
+      // Kneecaps
+      ctx.fillStyle = '#a0a8b8';
+      ctx.fillRect(Math.floor(W*0.35), Math.floor(H*0.67), Math.floor(W*0.12), Math.floor(H*0.05));
+      ctx.fillRect(Math.floor(W*0.53), Math.floor(H*0.67), Math.floor(W*0.12), Math.floor(H*0.05));
+
+      // Belt
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(W*0.33), Math.floor(H*0.60), Math.floor(W*0.34), Math.floor(H*0.04));
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.60), Math.floor(W*0.06), Math.floor(H*0.04));
+
+      // Torso (plate armour)
+      ctx.fillStyle = '#5c6878';
+      ctx.fillRect(Math.floor(W*0.34), Math.floor(H*0.36), Math.floor(W*0.32), Math.floor(H*0.26));
+      // Breastplate centre ridge
+      ctx.fillStyle = '#8090a8';
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.37), Math.floor(W*0.06), Math.floor(H*0.24));
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(Math.floor(W*0.47), Math.floor(H*0.37), 2, Math.floor(H*0.24));
+      // Plate segment lines
+      ctx.fillStyle = '#404858';
+      ctx.fillRect(Math.floor(W*0.34), Math.floor(H*0.48), Math.floor(W*0.32), 2);
+
+      // Shoulder pauldrons (larger, more armoured)
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(W*0.27), Math.floor(H*0.35), Math.floor(W*0.10), Math.floor(H*0.14));
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.35), Math.floor(W*0.10), Math.floor(H*0.14));
+      ctx.fillStyle = '#8890a8';
+      ctx.fillRect(Math.floor(W*0.27), Math.floor(H*0.35), Math.floor(W*0.10), 3);
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.35), Math.floor(W*0.10), 3);
+      ctx.fillStyle = '#c8c0d0';
+      ctx.fillRect(Math.floor(W*0.29), Math.floor(H*0.39), 3, 3); ctx.fillRect(Math.floor(W*0.29), Math.floor(H*0.44), 3, 3);
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.39), 3, 3); ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.44), 3, 3);
+
+      // Left arm + large shield
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(W*0.19), Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
+      // Shield body
+      ctx.fillStyle = '#7890b0';
+      ctx.fillRect(Math.floor(W*0.07), Math.floor(H*0.37), Math.floor(W*0.15), Math.floor(H*0.28));
+      ctx.strokeStyle = '#40506a'; ctx.lineWidth = 2;
+      ctx.strokeRect(Math.floor(W*0.07), Math.floor(H*0.37), Math.floor(W*0.15), Math.floor(H*0.28));
+      // Shield boss (centre stud)
+      ctx.fillStyle = '#c89a30';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.145), Math.floor(H*0.51), Math.floor(W*0.03), 0, Math.PI*2); ctx.fill();
+      // Shield cross
+      ctx.fillStyle = '#90a8c0';
+      ctx.fillRect(Math.floor(W*0.143), Math.floor(H*0.39), 2, Math.floor(H*0.26));
+      ctx.fillRect(Math.floor(W*0.08), Math.floor(H*0.50), Math.floor(W*0.13), 2);
+      // Shield highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(Math.floor(W*0.08), Math.floor(H*0.38), Math.floor(W*0.15), 2);
+
+      // Right arm + sword (rotated by swing angle)
+      ctx.save();
+      const wPivX = Math.floor(W*0.65), wPivY = Math.floor(H*0.42);
+      ctx.translate(wPivX, wPivY); ctx.rotate(ang); ctx.translate(-wPivX, -wPivY);
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(wPivX, Math.floor(H*0.42), Math.floor(W*0.12), Math.floor(H*0.18));
+      // Sword pommel
+      ctx.fillStyle = '#6a3810';
+      ctx.fillRect(Math.floor(W*0.68), Math.floor(H*0.59), Math.floor(W*0.05), Math.floor(H*0.07));
+      ctx.fillStyle = '#888090';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.705), Math.floor(H*0.67), Math.floor(W*0.03), 0, Math.PI*2); ctx.fill();
+      // Crossguard
+      ctx.fillStyle = '#9b5de5';
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.57), Math.floor(W*0.14), Math.floor(H*0.030));
+      ctx.fillStyle = '#c8a0ff';
+      ctx.fillRect(Math.floor(W*0.63), Math.floor(H*0.57), Math.floor(W*0.14), 2);
+      // Blade
+      ctx.fillStyle = '#b8c8d8';
+      ctx.fillRect(Math.floor(W*0.685), Math.floor(H*0.25), Math.floor(W*0.030), Math.floor(H*0.33));
+      ctx.fillStyle = '#dce8f4';
+      ctx.fillRect(Math.floor(W*0.685), Math.floor(H*0.25), 2, Math.floor(H*0.33));
+      // Blade tip
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(Math.floor(W*0.685), Math.floor(H*0.25), Math.floor(W*0.030), 2);
+      ctx.restore();
+
+      // HEAD — full helmet (no face visible)
+      const whx = Math.floor(W*0.34), why = Math.floor(H*0.06);
+      const whw = Math.floor(W*0.32), whh = Math.floor(H*0.30);
+      // Helmet body
+      ctx.fillStyle = '#5c6878';
+      ctx.fillRect(whx, why + Math.floor(whh*0.15), whw, Math.floor(whh*0.85));
+      // Helmet dome (rounded top)
+      ctx.beginPath();
+      ctx.arc(Math.floor(W*0.50), why + Math.floor(whh*0.20), Math.floor(whw*0.50), Math.PI, 0);
+      ctx.fillStyle = '#5c6878'; ctx.fill();
+      // Helmet visor slit
+      ctx.fillStyle = '#1a2030';
+      ctx.fillRect(whx + Math.floor(whw*0.18), why + Math.floor(whh*0.44), Math.floor(whw*0.64), Math.floor(whh*0.10));
+      // Eye glow through visor
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(whx + Math.floor(whw*0.22), why + Math.floor(whh*0.46), Math.floor(whw*0.22), Math.floor(whh*0.06));
+      ctx.fillRect(whx + Math.floor(whw*0.56), why + Math.floor(whh*0.46), Math.floor(whw*0.22), Math.floor(whh*0.06));
+      // Cheek guards
+      ctx.fillStyle = '#4a5868';
+      ctx.fillRect(whx, why + Math.floor(whh*0.40), Math.floor(whw*0.16), Math.floor(whh*0.40));
+      ctx.fillRect(whx + whw - Math.floor(whw*0.16), why + Math.floor(whh*0.40), Math.floor(whw*0.16), Math.floor(whh*0.40));
+      // Helmet highlight
+      ctx.fillStyle = '#8898b0';
+      ctx.fillRect(whx + Math.floor(whw*0.16), why + Math.floor(whh*0.15), Math.floor(whw*0.68), 3);
+      // Crest/plume base
+      ctx.fillStyle = '#8a0a0a';
+      ctx.fillRect(Math.floor(W*0.47), why, Math.floor(W*0.06), Math.floor(whh*0.28));
+      ctx.fillStyle = '#cc2020';
+      ctx.fillRect(Math.floor(W*0.48), why, Math.floor(W*0.04), 3);
+    }
+
+    // ── Hurt flash (all classes) ──
     if (hurt > 0) {
       ctx.save(); ctx.globalAlpha = hurt * 0.6;
       ctx.fillStyle = 'rgba(255,80,80,1)'; ctx.fillRect(0, 0, W, H);
@@ -3339,7 +3648,10 @@ const BattleSystem = {
 
   _guard() {
     if (Player.guarding) {
-      this._log('Already guarding this turn!', null, '#ffaa44'); return;
+      // Don't go into log phase — just flash the text and stay in menu
+      const el = document.getElementById('battle-log-text');
+      if (el) { el.textContent = '⚠ Already guarding this turn!'; el.style.color = '#ffaa44'; }
+      return;
     }
     Player.guarding = true;
     this._busy = true; this._setMenuDisabled(true);
