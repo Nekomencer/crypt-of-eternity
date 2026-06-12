@@ -645,7 +645,7 @@
         <span>WASD/↑↓←→ Move</span>
         <span>Z/X/C/V Diagonal</span>
         <span>SPC Atk · Q Potion</span>
-        <span>1/2/3 Skills</span>
+        <span>S Skill · 1/2/3 Cast</span>
         <span>I Inv · E Talk</span>
         <span>ESC Pause</span>
       </div>
@@ -4764,11 +4764,6 @@ const BattleSystem = {
       return;
     }
     if (this._busy) return;
-    // 1/2/3 always trigger skills directly, regardless of menu phase
-    if (key==='1'||key==='2'||key==='3') {
-      const slot = parseInt(key)-1;
-      if (Player.skills[slot]) { this._useSkill(slot); return; }
-    }
     if (this._phase==='menu') {
       if (key==='ArrowLeft'||key==='ArrowUp') { this._cursor=(this._cursor-1+4)%4; this._highlightMenu(); return; }
       if (key==='ArrowRight'||key==='ArrowDown') { this._cursor=(this._cursor+1)%4; this._highlightMenu(); return; }
@@ -4787,8 +4782,16 @@ const BattleSystem = {
       if (key==='i'||key==='I') { this._showItems(); return; }
       if (key==='g'||key==='G') { this._guard(); return; }
     }
-    if (this._phase==='skills'||this._phase==='items') {
-      if (key==='Escape'||key==='q'||key==='Q') this._showMenu();
+    if (this._phase==='skills') {
+      // 1/2/3 cast the corresponding skill slot while skill menu is open
+      if (key==='1'||key==='2'||key==='3') {
+        const slot = parseInt(key)-1;
+        if (Player.skills[slot]) { this._useSkill(slot); return; }
+      }
+      if (key==='Escape'||key==='q'||key==='Q') { this._showMenu(); return; }
+    }
+    if (this._phase==='items') {
+      if (key==='Escape'||key==='q'||key==='Q') { this._showMenu(); return; }
     }
   },
 };
