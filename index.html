@@ -253,38 +253,38 @@
   #battle-screen.active { display:block; }
   #battle-bg-canvas { position:absolute; inset:0; z-index:0; width:100%; height:100%; }
 
-  #battle-enemy-area {
-    position:absolute; top:5%; right:3%; z-index:1; max-width:600px;
-    display:flex; flex-direction:column; align-items:center; gap:8px;
+  /* FE-style side-by-side stage canvas */
+  #fe-stage-canvas {
+    position:absolute; top:0; left:0;
+    width:100%; height:52%;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    display:block; z-index:1;
   }
-  #battle-enemy-name { font-size:11px; color:var(--white); letter-spacing:2px; text-align:center; }
-  #battle-enemy-canvas {
-    image-rendering:pixelated; width:256px; height:256px;
-    background:#0a0818; border:2px solid var(--border);
-  }
-  #battle-enemy-panels { display:flex; flex-direction:row; gap:8px; align-items:flex-end; justify-content:center; }
-  .battle-enemy-panel { display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .battle-track.med { width:90px; height:7px; }
 
-  #battle-player-area {
-    position:absolute; bottom:26%; left:8%; z-index:1;
-    display:flex; flex-direction:column; align-items:flex-start; gap:5px;
+  /* Status row below stage */
+  #fe-status-row {
+    position:absolute; top:52%; left:0; right:0; height:13%;
+    display:flex; align-items:center;
+    background:rgba(7,5,16,0.97);
+    border-top:2px solid var(--border); border-bottom:1px solid var(--border);
+    padding:0 14px; gap:10px; box-sizing:border-box; z-index:2;
+    min-height:52px;
   }
-  #battle-player-canvas {
-    image-rendering:pixelated; width:192px; height:192px;
-    background:#100e1c; border:2px solid var(--border);
-  }
-  #battle-player-name { font-size:7px; color:var(--dim); letter-spacing:1px; }
+  #fe-player-status { flex:1; display:flex; flex-direction:column; gap:3px; min-width:0; }
+  #fe-enemy-status  { flex:1; display:flex; flex-direction:column; gap:3px; align-items:flex-end; min-width:0; }
+  .fe-unit-name { font-size:7px; color:var(--gold); letter-spacing:1px; margin-bottom:1px; }
+  .fe-vs-sep    { font-size:11px; color:#3a3050; flex-shrink:0; padding:0 4px; }
+  .fe-enemy-panel { display:flex; flex-direction:column; align-items:flex-end; gap:2px; width:100%; }
 
   .battle-stat-row { display:flex; align-items:center; gap:6px; }
-  .battle-bar-lbl  { font-size:7px; color:var(--dim); width:14px; }
-  .battle-track    { height:7px; background:#1a1828; border:1px solid var(--border); width:120px; }
+  .battle-bar-lbl  { font-size:7px; color:var(--dim); width:14px; flex-shrink:0; }
+  .battle-track    { height:7px; background:#1a1828; border:1px solid var(--border); width:110px; flex-shrink:0; }
   .battle-track.wide { width:150px; height:9px; }
   .battle-fill     { height:100%; transition:width 0.25s; background:var(--green); }
   .battle-num      { font-size:7px; color:var(--dim); min-width:44px; }
 
   #battle-log-box {
-    position:absolute; bottom:15%; left:50%; transform:translateX(-50%); z-index:1;
+    position:absolute; bottom:14%; left:50%; transform:translateX(-50%); z-index:1;
     width:380px; max-width:88vw; box-sizing:border-box;
     background:rgba(14,12,30,0.96); border:2px solid var(--border);
     padding:10px 14px; min-height:44px;
@@ -292,7 +292,7 @@
   #battle-log-text { margin:0; font-size:9px; line-height:1.6; color:var(--white); text-align:center; }
 
   #battle-menu {
-    position:absolute; bottom:5%; left:50%; transform:translateX(-50%); z-index:1;
+    position:absolute; bottom:3%; left:50%; transform:translateX(-50%); z-index:1;
     display:flex; gap:8px;
   }
   .battle-btn {
@@ -306,7 +306,7 @@
   .battle-btn:disabled { opacity:0.3; cursor:default; }
 
   #battle-sub-menu {
-    position:absolute; bottom:5%; left:50%; transform:translateX(-50%); z-index:1;
+    position:absolute; bottom:3%; left:50%; transform:translateX(-50%); z-index:1;
     display:flex; flex-wrap:wrap; gap:5px; justify-content:center; max-width:420px;
   }
   #battle-sub-menu.hidden { display:none; }
@@ -543,31 +543,21 @@
     #item-detail .item-desc { font-size: 12px; }
     .item-btn { min-height: 44px; font-size: 8px; padding: 8px 12px; }
 
-    /* Battle screen layout */
+    /* Battle screen layout (mobile) */
     #battle-screen { overflow: hidden; }
-    #battle-enemy-area { top: 4% !important; right: 4% !important; }
-    #battle-player-area { bottom: 22% !important; left: 4% !important; }
-    #battle-log-box { bottom: 13% !important; width: 92% !important; }
+    #fe-status-row { padding: 0 8px; gap: 6px; }
+    #battle-log-box { bottom: 13% !important; width: 94% !important; font-size: 8px; }
     #battle-menu { bottom: 2% !important; gap: 5px !important; }
-    #battle-enemy-name { font-size: 9px !important; }
-
     #battle-menu {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      padding: 8px;
+      display: flex; flex-wrap: wrap;
+      gap: 6px; justify-content: center; padding: 6px;
     }
     #battle-menu button, #battle-sub-menu button {
-      min-width: 80px;
-      min-height: 48px;
-      font-size: 13px;
-      border-radius: 10px;
-      padding: 8px 12px;
+      min-width: 72px; min-height: 44px;
+      font-size: 11px; border-radius: 8px; padding: 6px 10px;
     }
-    #battle-enemy-canvas { width: 160px !important; height: 160px !important; }
-    #battle-player-canvas { width: 120px !important; height: 120px !important; }
-    #battle-enemy-area, #battle-player-area { gap: 4px; }
+    .battle-track { width: 80px !important; }
+    .fe-vs-sep { display: none; }
 
     /* Overlays full-screen */
     #inv-overlay .overlay-box,
@@ -719,27 +709,26 @@
 
 <div id="battle-screen">
   <canvas id="battle-bg-canvas"></canvas>
-  <div id="battle-enemy-area">
-    <div id="battle-enemy-name"></div>
-    <div class="battle-stat-row">
-      <span class="battle-bar-lbl">HP</span>
-      <div class="battle-track wide"><div id="enemy-hp-bar" class="battle-fill"></div></div>
-      <span id="enemy-hp-text" class="battle-num"></span>
+  <!-- FE-style combined sprite stage -->
+  <canvas id="fe-stage-canvas"></canvas>
+  <!-- Status row below stage -->
+  <div id="fe-status-row">
+    <div id="fe-player-status">
+      <div class="fe-unit-name" id="fe-player-name-tag">HERO</div>
+      <div class="battle-stat-row">
+        <span class="battle-bar-lbl">HP</span>
+        <div class="battle-track" style="width:110px"><div id="player-battle-hp-bar" class="battle-fill"></div></div>
+        <span id="player-battle-hp-text" class="battle-num"></span>
+      </div>
+      <div class="battle-stat-row">
+        <span class="battle-bar-lbl">MP</span>
+        <div class="battle-track" style="width:110px"><div id="player-battle-mp-bar" class="battle-fill" style="background:#6688ff"></div></div>
+        <span id="player-battle-mp-text" class="battle-num"></span>
+      </div>
     </div>
-    <canvas id="battle-enemy-canvas" width="256" height="256"></canvas>
-  </div>
-  <div id="battle-player-area">
-    <canvas id="battle-player-canvas" width="192" height="192"></canvas>
-    <div id="battle-player-name">ADVENTURER</div>
-    <div class="battle-stat-row">
-      <span class="battle-bar-lbl">HP</span>
-      <div class="battle-track"><div id="player-battle-hp-bar" class="battle-fill"></div></div>
-      <span id="player-battle-hp-text" class="battle-num"></span>
-    </div>
-    <div class="battle-stat-row">
-      <span class="battle-bar-lbl">MP</span>
-      <div class="battle-track"><div id="player-battle-mp-bar" class="battle-fill"></div></div>
-      <span id="player-battle-mp-text" class="battle-num"></span>
+    <div class="fe-vs-sep">⚔</div>
+    <div id="fe-enemy-status">
+      <!-- Dynamic enemy HP rows inserted by _buildEnemyUI() -->
     </div>
   </div>
   <div id="battle-log-box"><p id="battle-log-text"></p></div>
@@ -3308,6 +3297,404 @@ const BattleRenderer = {
 };
 
 // ============================================================
+//  FEBattle — Fire Emblem GBA-style animated battle stage
+// ============================================================
+const FEBattle = {
+  canvas: null, ctx: null, _raf: null, _running: false,
+  tick: 0,
+  _flashAlpha: 0, _flashColor: '#fff',
+  effects: [],
+  pAnim: null,
+  eAnim: [],
+
+  init() {
+    this.canvas = document.getElementById('fe-stage-canvas');
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this._syncSize();
+  },
+
+  _syncSize() {
+    const W = window.innerWidth;
+    const H = Math.floor(window.innerHeight * 0.52);
+    if (this.canvas.width !== W || this.canvas.height !== H) {
+      this.canvas.width  = W;
+      this.canvas.height = H;
+    }
+  },
+
+  reset(enemyCount) {
+    this.tick = 0; this.effects = []; this._flashAlpha = 0;
+    this.pAnim = { dx:0, dy:0, phase:'idle', t:0, hurtAlpha:0, alpha:1 };
+    this.eAnim = Array.from({ length: enemyCount }, () =>
+      ({ dx:0, dy:0, phase:'idle', t:0, hurtAlpha:0, alpha:1 }));
+  },
+
+  startLoop() {
+    if (this._running) return; this._running = true;
+    const tick = () => {
+      if (!this._running) return;
+      this._syncSize(); this.draw();
+      this._raf = requestAnimationFrame(tick);
+    };
+    this._raf = requestAnimationFrame(tick);
+  },
+
+  stopLoop() {
+    this._running = false;
+    if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
+  },
+
+  draw() {
+    if (!this.canvas || !this.ctx) return;
+    const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+    if (!W || !H) return;
+    ctx.clearRect(0,0,W,H);
+    ctx.imageSmoothingEnabled = false;
+    this.tick++;
+    this._drawTerrain(ctx, W, H);
+    this._drawPlayerSprite(ctx, W, H);
+    this._drawEnemySprites(ctx, W, H);
+    if (this._flashAlpha > 0.015) {
+      ctx.save(); ctx.globalAlpha = this._flashAlpha;
+      ctx.fillStyle = this._flashColor; ctx.fillRect(0,0,W,H);
+      ctx.restore(); this._flashAlpha *= 0.83;
+    } else { this._flashAlpha = 0; }
+    this._drawEffects(ctx, W, H);
+  },
+
+  _drawTerrain(ctx, W, H) {
+    const t = this.tick;
+    // Background fill
+    ctx.fillStyle = '#070510'; ctx.fillRect(0,0,W,H);
+    // Stone wall tiles
+    const wallH = Math.floor(H * 0.58);
+    const bW = Math.max(22, Math.floor(W / 18));
+    const bH = Math.max(11, Math.floor(H * 0.075));
+    for (let row = 0; row < Math.ceil(wallH / bH) + 1; row++) {
+      const off = row % 2 === 0 ? 0 : Math.floor(bW * 0.5);
+      for (let col = -1; col <= Math.ceil(W / bW) + 1; col++) {
+        const bx = col * bW + off, by = row * bH;
+        const v = 15 + ((row * 7 + col * 3 + 11) & 7);
+        ctx.fillStyle = `rgb(${v},${v-2},${v+7})`;
+        ctx.fillRect(bx+1, by+1, bW-2, bH-2);
+        ctx.fillStyle = 'rgba(255,255,255,0.035)';
+        ctx.fillRect(bx+1, by+1, bW-2, 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fillRect(bx+1, by+bH-2, bW-2, 1);
+      }
+    }
+    // Wall-floor junction
+    ctx.fillStyle = '#14102a'; ctx.fillRect(0, wallH, W, 3);
+    // Floor tiles
+    const sW = Math.max(18, Math.floor(W / 16));
+    const sH = Math.max(9,  Math.floor((H - wallH) / 4));
+    for (let row = 0; row < Math.ceil((H - wallH) / sH) + 1; row++) {
+      const off = row % 2 === 0 ? 0 : Math.floor(sW * 0.5);
+      for (let col = -1; col <= Math.ceil(W / sW) + 1; col++) {
+        const sx = col * sW + off, sy = wallH + row * sH;
+        const v = 40 + ((row * 5 + col * 3 + 7) & 9);
+        ctx.fillStyle = `rgb(${v},${v-4},${v+2})`;
+        ctx.fillRect(sx+1, sy+1, sW-2, sH-2);
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(sx+1, sy+1, sW-2, 1);
+      }
+    }
+    // Floor highlight line
+    ctx.fillStyle = '#2a2244'; ctx.fillRect(0, wallH+3, W, 2);
+    // Torches
+    const torchY = Math.floor(H * 0.26);
+    for (const tx of [Math.floor(W*0.17), Math.floor(W*0.83)]) {
+      const flick = 0.75 + 0.25 * Math.sin(t*0.17 + tx*0.01);
+      ctx.fillStyle = '#1e1834'; ctx.fillRect(tx-4, torchY, 8, 13);
+      ctx.fillStyle = '#3a2d54'; ctx.fillRect(tx-5, torchY-4, 10, 5);
+      ctx.fillStyle = '#ff7300'; ctx.fillRect(tx-3, torchY-8, 6, 5);
+      ctx.fillStyle = '#ffcc00'; ctx.fillRect(tx-2, torchY-10, 4, 3);
+      ctx.fillStyle = '#fff';    ctx.fillRect(tx-1, torchY-11, 2, 2);
+      ctx.save(); ctx.globalAlpha = 0.11 * flick;
+      const g = ctx.createRadialGradient(tx, torchY-5, 0, tx, torchY-5, 58);
+      g.addColorStop(0,'#ff8800'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(tx-65, torchY-65, 130, 110);
+      ctx.restore();
+    }
+    // Center shadow vignette
+    ctx.save(); ctx.globalAlpha = 0.28;
+    const cv = ctx.createLinearGradient(W*0.41,0, W*0.59,0);
+    cv.addColorStop(0,'rgba(0,0,0,0)'); cv.addColorStop(0.5,'rgba(0,0,10,0.75)'); cv.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = cv; ctx.fillRect(0,0,W,H); ctx.restore();
+    // Bottom vignette
+    ctx.save();
+    const bv = ctx.createLinearGradient(0,H*0.65,0,H);
+    bv.addColorStop(0,'rgba(0,0,0,0)'); bv.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle = bv; ctx.fillRect(0,H*0.65,W,H*0.35); ctx.restore();
+  },
+
+  _sz(W) { return Math.min(Math.floor(W * 0.29), 168); },
+
+  _drawPlayerSprite(ctx, W, H) {
+    if (!this.pAnim) return;
+    const pa = this.pAnim;
+    const sz = this._sz(W);
+    const bob = pa.phase==='idle' ? Math.sin(this.tick*0.08)*2.5 : 0;
+    const wallH = Math.floor(H*0.58);
+    const baseX = Math.floor(W*0.12);
+    const drawX = baseX + pa.dx;
+    const drawY = wallH - sz - 4 + pa.dy + (pa.phase!=='hit' ? bob : 0);
+    // Shadow ellipse
+    ctx.save(); ctx.globalAlpha = 0.32*pa.alpha; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(drawX+sz/2, wallH-2, sz*0.31, 5, 0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Sprite (flipped to face right)
+    ctx.save(); ctx.globalAlpha = pa.alpha;
+    ctx.translate(drawX+sz/2, drawY);
+    ctx.scale(-1,1); ctx.translate(-sz/2,0);
+    TilePainter.battlePlayer(ctx, sz, sz, {
+      swingAngle: pa.phase==='attack' ? -(0.3+pa.t*0.7) : 0,
+      hurtAlpha: pa.hurtAlpha,
+    });
+    ctx.restore();
+    // Name tag
+    const cls = Player.passive==='arcane'?'MAGE':Player.passive==='swift'?'ROGUE':'WARRIOR';
+    ctx.save(); ctx.globalAlpha=pa.alpha;
+    ctx.fillStyle='rgba(6,4,16,0.82)'; ctx.fillRect(drawX, drawY-17, sz, 15);
+    ctx.fillStyle='#b8ccee';
+    ctx.font=`bold ${Math.max(7,Math.floor(sz*0.082))}px monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(cls, drawX+sz/2, drawY-14);
+    ctx.restore();
+  },
+
+  _drawEnemySprites(ctx, W, H) {
+    const enemies = BattleSystem.enemies; if (!enemies.length) return;
+    const cnt = enemies.length;
+    const wallH = Math.floor(H*0.58);
+    const sz = cnt===1 ? this._sz(W) : Math.floor(this._sz(W)*0.72);
+    const gap = 6;
+    enemies.forEach((e, i) => {
+      const ea = this.eAnim[i] || {dx:0,dy:0,phase:'idle',t:0,hurtAlpha:0,alpha:1};
+      const bob = (e.alive && ea.phase==='idle') ? Math.sin(this.tick*0.08+i*1.8)*2 : 0;
+      const xOff = cnt>1 ? (i-(cnt-1)/2)*(sz+gap) : 0;
+      const baseX = Math.floor(W*0.88) - sz;
+      const drawX = baseX + xOff + ea.dx;
+      const drawY = wallH - sz - 4 + ea.dy + (e.alive&&ea.phase!=='hit' ? bob : 0);
+      // Shadow
+      ctx.save(); ctx.globalAlpha=0.32*ea.alpha; ctx.fillStyle='#000';
+      ctx.beginPath(); ctx.ellipse(drawX+sz/2, wallH-2, sz*0.31, 5, 0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      // Sprite
+      ctx.save(); ctx.globalAlpha=ea.alpha;
+      ctx.translate(drawX, drawY);
+      if (e.alive) {
+        TilePainter.battleEnemy(ctx, e.type, sz, sz, {
+          swingAngle: ea.phase==='attack' ? (0.3+ea.t*0.7) : 0,
+          hurtAlpha: ea.hurtAlpha,
+        });
+      } else {
+        ctx.globalAlpha = ea.alpha*0.3;
+        TilePainter.battleEnemy(ctx, e.type, sz, sz, {hurtAlpha:0,swingAngle:0});
+        ctx.globalAlpha = ea.alpha*0.9;
+        ctx.fillStyle='#333'; ctx.font=`bold ${Math.floor(sz*0.5)}px monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('✗', sz/2, sz/2);
+      }
+      ctx.restore();
+      // Name tag
+      ctx.save(); ctx.globalAlpha=ea.alpha;
+      ctx.fillStyle='rgba(6,4,16,0.82)'; ctx.fillRect(drawX, drawY-17, sz, 15);
+      ctx.fillStyle='#f0c090';
+      ctx.font=`bold ${Math.max(7,Math.floor(sz*0.082))}px monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText(e.name.toUpperCase().substring(0,9), drawX+sz/2, drawY-14);
+      ctx.restore();
+    });
+  },
+
+  _drawEffects(ctx, W, H) {
+    for (let i=this.effects.length-1; i>=0; i--) {
+      const fx=this.effects[i]; fx.frame++;
+      if (fx.frame>=fx.maxFrames) { this.effects.splice(i,1); continue; }
+      const tp = fx.frame/fx.maxFrames;
+      ctx.save();
+      if (fx.type==='dmg') {
+        const fade = tp<0.6 ? 1 : 1-(tp-0.6)/0.4;
+        ctx.globalAlpha=fade;
+        const fy=fx.y - tp*52;
+        ctx.font=`bold ${fx.crit?25:20}px monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='#000'; ctx.lineWidth=3.5;
+        ctx.strokeText(fx.text, fx.x, fy);
+        ctx.fillStyle=fx.crit?'#ffee00':'#fff'; ctx.fillText(fx.text, fx.x, fy);
+        if (fx.crit) {
+          ctx.globalAlpha=fade*0.95; ctx.font='bold 11px monospace';
+          ctx.strokeText('CRITICAL!', fx.x, fy-27);
+          ctx.fillStyle='#ff4444'; ctx.fillText('CRITICAL!', fx.x, fy-27);
+        }
+      } else if (fx.type==='miss') {
+        const fade=tp<0.5?1:1-(tp-0.5)/0.5; ctx.globalAlpha=fade;
+        ctx.font='bold 15px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
+        ctx.strokeText('MISS', fx.x, fx.y-tp*28);
+        ctx.fillStyle='#aaa'; ctx.fillText('MISS', fx.x, fx.y-tp*28);
+      } else if (fx.type==='spark') {
+        ctx.globalAlpha=1-tp;
+        const cols=['#ffee44','#ff8800','#fff','#ffaa22'];
+        for (let s=0;s<8;s++) {
+          const ang=(s/8)*Math.PI*2+fx.frame*0.25;
+          const d=tp*38;
+          const sx=fx.x+Math.cos(ang)*d, sy=fx.y+Math.sin(ang)*d;
+          ctx.fillStyle=cols[s%4];
+          const csz=Math.max(2,(1-tp)*5);
+          ctx.fillRect(sx-csz/2, sy-csz/2, csz, csz);
+        }
+      } else if (fx.type==='ring') {
+        ctx.globalAlpha=(1-tp)*0.85; ctx.strokeStyle='#ffdd55';
+        ctx.lineWidth=2.5; ctx.beginPath();
+        ctx.arc(fx.x, fx.y, tp*44, 0, Math.PI*2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  },
+
+  // ── Animation triggers ──────────────────────────────────────
+
+  triggerPlayerAttack(dmg, isCrit) {
+    if (!this.canvas) return;
+    const W=this.canvas.width, H=this.canvas.height;
+    const sz=this._sz(W);
+    const cnt=BattleSystem.enemies.length;
+    const eBaseX = Math.floor(W*0.88)-sz + (cnt>1 ? 0 : 0);
+    const impX=eBaseX+sz/2, impY=Math.floor(H*0.44);
+    const stepAmt=Math.floor(W*0.15);
+    const T={step:130, swing:265, impact:315, back:435, end:610};
+    const start=performance.now(); let impacted=false;
+    const run=(now)=>{
+      const el=now-start; const pa=this.pAnim;
+      if (el<T.step) {
+        pa.dx=Math.floor((el/T.step)*stepAmt); pa.phase='step'; pa.t=0;
+      } else if (el<T.swing) {
+        pa.dx=stepAmt; pa.phase='attack'; pa.t=(el-T.step)/(T.swing-T.step);
+      } else if (el<T.impact+35) {
+        pa.dx=stepAmt; pa.phase='attack'; pa.t=1;
+        if (!impacted) {
+          impacted=true;
+          this._flashAlpha=isCrit?0.94:0.52; this._flashColor=isCrit?'#fff':'#ffe870';
+          this.effects.push({type:'spark',x:impX,y:impY,frame:0,maxFrames:18});
+          this.effects.push({type:'ring', x:impX,y:impY,frame:0,maxFrames:14});
+          this.effects.push({type:'dmg', text:String(dmg), x:impX, y:impY-18,
+            frame:0, maxFrames:58, crit:isCrit});
+          const tgt=BattleSystem._firstAlive();
+          if (tgt) {
+            const ei=BattleSystem.enemies.indexOf(tgt);
+            const ea=this.eAnim[ei];
+            if (ea) { ea.hurtAlpha=1; ea.dx=18; ea.phase='hit'; }
+          }
+          Audio.play('attack');
+        }
+      } else if (el<T.back) {
+        const tb=(el-(T.impact+35))/(T.back-T.impact-35);
+        pa.dx=Math.floor(stepAmt*(1-tb)); pa.phase=tb>0.55?'idle':'step'; pa.t=0;
+        const tgt=BattleSystem._firstAlive();
+        if (tgt) {
+          const ea=this.eAnim[BattleSystem.enemies.indexOf(tgt)];
+          if (ea) { ea.hurtAlpha=Math.max(0,1-tb*1.7); ea.dx=Math.max(0,Math.floor(18*(1-tb*2))); if(tb>0.5)ea.phase='idle'; }
+        }
+      } else if (el<T.end) {
+        pa.dx=0; pa.phase='idle'; pa.t=0;
+      } else {
+        pa.dx=0; pa.phase='idle'; pa.t=0; pa.hurtAlpha=0; return;
+      }
+      requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  },
+
+  triggerEnemyAttack(enemyIdx, dmg, isMiss) {
+    if (!this.canvas) return;
+    const W=this.canvas.width, H=this.canvas.height;
+    const sz=this._sz(W);
+    const impX=Math.floor(W*0.12)+sz/2, impY=Math.floor(H*0.44);
+    const stepAmt=Math.floor(W*0.15);
+    const ea=this.eAnim[enemyIdx]; if (!ea) return;
+    const T={step:130, swing:265, impact:315, back:435, end:610};
+    const start=performance.now(); let impacted=false;
+    const run=(now)=>{
+      const el=now-start;
+      if (el<T.step) {
+        ea.dx=-Math.floor((el/T.step)*stepAmt); ea.phase='step'; ea.t=0;
+      } else if (el<T.swing) {
+        ea.dx=-stepAmt; ea.phase='attack'; ea.t=(el-T.step)/(T.swing-T.step);
+      } else if (el<T.impact+35) {
+        ea.dx=-stepAmt; ea.phase='attack'; ea.t=1;
+        if (!impacted) {
+          impacted=true;
+          if (isMiss) {
+            this.effects.push({type:'miss',x:impX,y:impY-12,frame:0,maxFrames:40});
+          } else {
+            this._flashAlpha=0.38; this._flashColor='#ff3322';
+            this.effects.push({type:'spark',x:impX,y:impY,frame:0,maxFrames:18});
+            this.effects.push({type:'ring', x:impX,y:impY,frame:0,maxFrames:14});
+            if (dmg>0) this.effects.push({type:'dmg',text:String(dmg),x:impX,y:impY-18,frame:0,maxFrames:58,crit:false});
+            if (this.pAnim) { this.pAnim.hurtAlpha=1; this.pAnim.dx=-13; this.pAnim.phase='hit'; }
+          }
+        }
+      } else if (el<T.back) {
+        const tb=(el-(T.impact+35))/(T.back-T.impact-35);
+        ea.dx=-Math.floor(stepAmt*(1-tb)); ea.phase=tb>0.55?'idle':'step'; ea.t=0;
+        if (!isMiss && this.pAnim) {
+          this.pAnim.hurtAlpha=Math.max(0,1-tb*1.7);
+          this.pAnim.dx=-Math.max(0,Math.floor(13*(1-tb*2)));
+          if(tb>0.5) this.pAnim.phase='idle';
+        }
+      } else if (el<T.end) {
+        ea.dx=0; ea.phase='idle'; ea.t=0;
+      } else {
+        ea.dx=0; ea.phase='idle'; ea.t=0;
+        if (this.pAnim) { this.pAnim.dx=0; this.pAnim.phase='idle'; this.pAnim.hurtAlpha=0; }
+        return;
+      }
+      requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  },
+
+  triggerEnemyDeath(enemyIdx) {
+    const ea=this.eAnim[enemyIdx]; if (!ea) return;
+    const start=performance.now();
+    const run=(now)=>{
+      const t=Math.min(1,(now-start)/480);
+      ea.alpha=1-t; ea.dy=Math.floor(t*20);
+      if (t<1) requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  },
+
+  // Quick hurt flash (for skill hits, no step animation)
+  quickHurt(enemyIdx) {
+    const ea=this.eAnim[enemyIdx]; if (!ea) return;
+    ea.hurtAlpha=1;
+    const start=performance.now();
+    const run=(now)=>{
+      const t=Math.min(1,(now-start)/420);
+      ea.hurtAlpha=1-t;
+      if (t<1) requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  },
+
+  quickHurtPlayer() {
+    if (!this.pAnim) return;
+    this.pAnim.hurtAlpha=1;
+    const start=performance.now();
+    const run=(now)=>{
+      const t=Math.min(1,(now-start)/420);
+      this.pAnim.hurtAlpha=1-t;
+      if (t<1) requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+  },
+};
+
+// ============================================================
 //  BattleSystem — Pokémon/Persona-style turn-based combat
 // ============================================================
 const BattleSystem = {
@@ -3357,6 +3744,14 @@ const BattleSystem = {
       this._buildEnemyUI();
       this._updateUI();
       this._renderAllSprites();
+      // FE stage init
+      FEBattle.init();
+      FEBattle.reset(this.enemies.length);
+      FEBattle.startLoop();
+      // Update player name tag
+      const cls = Player.passive==='arcane'?'MAGE':Player.passive==='swift'?'ROGUE':'WARRIOR';
+      const pnt = document.getElementById('fe-player-name-tag');
+      if (pnt) pnt.textContent = cls;
 
       const names = this.enemies.map(e => e.name).join(', ');
       const groupTxt = this.enemies.length > 1
@@ -3374,28 +3769,23 @@ const BattleSystem = {
   },
 
   _buildEnemyUI() {
-    const area = document.getElementById('battle-enemy-area');
+    const area = document.getElementById('fe-enemy-status');
+    if (!area) return;
     area.innerHTML = '';
-    const count = this.enemies.length;
-    const panels = document.createElement('div');
-    panels.id = 'battle-enemy-panels';
     this.enemies.forEach((e, i) => {
-      const sz = count === 1 ? 256 : count === 2 ? 160 : 112;
-      const nSz = count === 1 ? '11' : '9';
-      const trkCls = count === 1 ? 'battle-track wide' : 'battle-track med';
       const panel = document.createElement('div');
       panel.id = `battle-enemy-panel-${i}`;
-      panel.className = 'battle-enemy-panel';
+      panel.className = 'fe-enemy-panel';
       panel.innerHTML =
-        `<div id="ben${i}" style="font-size:${nSz}px;color:var(--white);letter-spacing:1px;text-align:center">${e.name.toUpperCase()}</div>` +
-        `<div class="battle-stat-row"><span class="battle-bar-lbl">HP</span>` +
-        `<div class="${trkCls}"><div id="ehb${i}" class="battle-fill" style="width:100%"></div></div>` +
-        `<span id="eht${i}" class="battle-num">${e.hp}/${e.maxHp}</span></div>` +
-        `<canvas id="bec${i}" width="${sz}" height="${sz}" ` +
-        `style="image-rendering:pixelated;width:${sz}px;height:${sz}px;background:#0a0818;border:2px solid var(--border)"></canvas>`;
-      panels.appendChild(panel);
+        `<div id="ben${i}" class="fe-unit-name">${e.name.toUpperCase()}</div>` +
+        `<div class="battle-stat-row" style="justify-content:flex-end">` +
+          `<span class="battle-bar-lbl">HP</span>` +
+          `<div class="battle-track" style="width:100px;max-width:40vw">` +
+            `<div id="ehb${i}" class="battle-fill" style="width:100%"></div></div>` +
+          `<span id="eht${i}" class="battle-num">${e.hp}/${e.maxHp}</span>` +
+        `</div>`;
+      area.appendChild(panel);
     });
-    area.appendChild(panels);
   },
 
   _showMenu() {
@@ -3445,63 +3835,12 @@ const BattleSystem = {
   },
 
   _renderAllSprites() {
-    const pc = document.getElementById('battle-player-canvas');
-    if (pc) {
-      const ctx = pc.getContext('2d');
-      ctx.clearRect(0,0,pc.width,pc.height);
-      ctx.imageSmoothingEnabled = false;
-      TilePainter.battlePlayer(ctx, pc.width, pc.height,
-        { bob:0, swingAngle:this._playerSwing||0, hurtAlpha:this._playerHurt||0 });
-    }
-    this.enemies.forEach((e, i) => {
-      const ec = document.getElementById('bec'+i);
-      if (!ec) return;
-      const ctx = ec.getContext('2d');
-      ctx.clearRect(0,0,ec.width,ec.height);
-      ctx.imageSmoothingEnabled = false;
-      if (e.alive) {
-        TilePainter.battleEnemy(ctx, e.type, ec.width, ec.height,
-          { bob:0, hurtAlpha:this._hurtTimers[i]||0 });
-      } else {
-        ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,ec.width,ec.height);
-        ctx.fillStyle='#555';
-        ctx.font='bold '+Math.floor(ec.width*0.22)+'px monospace';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('✗', ec.width/2, ec.height/2);
-      }
-    });
+    // FEBattle handles all sprite rendering via its own RAF loop
   },
 
-  _animHurtEnemy(idx) {
-    this._hurtTimers[idx] = 1.0;
-    const decay = () => {
-      this._hurtTimers[idx] = (this._hurtTimers[idx]||0)*0.78;
-      this._renderAllSprites();
-      if (this._hurtTimers[idx]>0.04) requestAnimationFrame(decay);
-      else { this._hurtTimers[idx]=0; this._renderAllSprites(); }
-    };
-    requestAnimationFrame(decay);
-  },
-
-  _animHurtPlayer() {
-    this._playerHurt = 1.0;
-    const decay = () => {
-      this._playerHurt = (this._playerHurt||0)*0.78; this._renderAllSprites();
-      if (this._playerHurt>0.04) requestAnimationFrame(decay);
-      else { this._playerHurt=0; this._renderAllSprites(); }
-    };
-    requestAnimationFrame(decay);
-  },
-
-  _animSwing() {
-    this._playerSwing = 1.0;
-    const decay = () => {
-      this._playerSwing = (this._playerSwing||0)*0.72; this._renderAllSprites();
-      if (this._playerSwing>0.04) requestAnimationFrame(decay);
-      else { this._playerSwing=0; this._renderAllSprites(); }
-    };
-    requestAnimationFrame(decay);
-  },
+  _animHurtEnemy(idx) { FEBattle.quickHurt(idx); },
+  _animHurtPlayer()   { FEBattle.quickHurtPlayer(); },
+  _animSwing()        { /* handled by FEBattle.triggerPlayerAttack */ },
 
   _log(text, cb, color) {
     this._phase = 'log'; this._busy = true; this._logCb = cb||null;
@@ -3531,15 +3870,18 @@ const BattleSystem = {
     const dmg = Math.max(1, Player.totalAtk - target.def + rng(-2,2));
     target.hp -= dmg;
     GameState.stats.damageDealt += dmg;
-    if (target.hp <= 0) {
+    const killed = target.hp <= 0;
+    if (killed) {
       target.alive = false; target.deathFlash = 8; target._rewarded = true;
       Audio.play('death');
       GameState.stats.enemiesKilled++;
       Player.gainExp(target.exp); Player.gainGold(rng(...target.gold));
       CombatSystem._drop(target);
+      // Death fade starts at impact frame (~315ms into attack anim)
+      setTimeout(() => FEBattle.triggerEnemyDeath(idx), 320);
     }
-    Audio.play('attack'); triggerHitStop(70); AnimSystem.hurtEnemy(target.id);
-    this._animSwing(); this._animHurtEnemy(idx);
+    triggerHitStop(70); AnimSystem.hurtEnemy(target.id);
+    FEBattle.triggerPlayerAttack(dmg, false);
     this._updateUI();
     this._log('You hit '+target.name+' for '+dmg+'!', () => {
       if (this._checkAllDead()) return;
@@ -3584,8 +3926,10 @@ const BattleSystem = {
       }
     }
     const dmg = Player.takeDamage(e.atk);
+    const ei = this.enemies.indexOf(e);
     Camera.shake(4); flashScreen();
-    this._animHurtPlayer(); this._updateUI();
+    FEBattle.triggerEnemyAttack(ei, dmg, false);
+    this._updateUI();
     const msg = dmg > 0 ? e.name+' hits you for '+dmg+'!' : e.name+' attacks!';
     this._log(msg, () => {
       if (Player.hp <= 0) { this._lose(); return; }
@@ -3615,7 +3959,7 @@ const BattleSystem = {
       : defeated[0]+' defeated!')+expPart+gldPart;
     this._log(msg, () => {
       this._flash(() => {
-        BattleRenderer.stopLoop(); BattleMusic.stop();
+        BattleRenderer.stopLoop(); FEBattle.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
         document.getElementById('dpad').style.visibility='';
         document.getElementById('action-btns').style.visibility='';
@@ -3632,7 +3976,7 @@ const BattleSystem = {
   _lose() {
     this._log('You have been defeated...', () => {
       this._flash(() => {
-        BattleRenderer.stopLoop(); BattleMusic.stop();
+        BattleRenderer.stopLoop(); FEBattle.stopLoop(); BattleMusic.stop();
         document.getElementById('battle-screen').classList.remove('active');
         document.getElementById('dpad').style.visibility='';
         document.getElementById('action-btns').style.visibility='';
@@ -3694,12 +4038,12 @@ const BattleSystem = {
     const ok=CombatSystem.skill(slot);
     if (!ok) { this._showMenu(); return; }
     if (def.aoe) {
-      this.enemies.forEach((e,i) => { if (e.alive) this._animHurtEnemy(i); });
+      this.enemies.forEach((e,i) => { if (e.alive) FEBattle.quickHurt(i); });
     } else {
       const t=this._firstAlive();
-      if (t) this._animHurtEnemy(this.enemies.indexOf(t));
+      if (t) FEBattle.quickHurt(this.enemies.indexOf(t));
     }
-    this._updateUI(); this._renderAllSprites();
+    this._updateUI();
     if (this._checkAllDead()) return;
     this._log(def.name+'!', () => this._enemyTurn());
   },
@@ -4294,7 +4638,7 @@ const InputHandler = {
 // ============================================================
 const Game = {
   init(){
-    Renderer.init(); InputHandler.init(); BattleRenderer.init();
+    Renderer.init(); InputHandler.init(); BattleRenderer.init(); FEBattle.init();
     document.getElementById('start-btn').onclick=()=>this.startGame();
     document.getElementById('restart-btn').onclick=()=>this.startGame();
     document.getElementById('victory-btn').onclick=()=>this.startGame();
