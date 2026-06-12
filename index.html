@@ -1853,71 +1853,218 @@ const TilePainter = {
   // ── PLAYER ────────────────────────────────────────────────
   player(ctx,sx,sy,W,H,animState){
     const bob = animState ? Math.sin(animState.bob * Math.PI * 2) * 2 : 0;
+    const cls = (typeof Player !== 'undefined')
+      ? (Player.passive === 'arcane' ? 'mage' : Player.passive === 'swift' ? 'rogue' : 'warrior')
+      : 'warrior';
     const cx = sx + W / 2;
     const baseY = sy + H * 0.52 + bob;
+    const ang = animState ? animState.swingAngle * 0.8 : 0;
 
     // Glow
+    const glowCol = cls==='mage' ? '#7744cc88' : cls==='rogue' ? '#ffcc0044' : PAL.playerGlow;
     const g = ctx.createRadialGradient(cx, baseY, 2, cx, baseY, W * 0.9);
-    g.addColorStop(0, PAL.playerGlow); g.addColorStop(1, 'transparent');
+    g.addColorStop(0, glowCol); g.addColorStop(1, 'transparent');
     ctx.fillStyle = g; ctx.fillRect(sx - W * 0.5, sy - H * 0.3, W * 2, H * 1.6);
 
     // Shadow ellipse
     ctx.fillStyle = PAL.shadow;
     ctx.beginPath(); ctx.ellipse(cx, sy + H * 0.88, W * 0.25, 4, 0, 0, Math.PI * 2); ctx.fill();
 
-    // Legs
-    ctx.fillStyle = '#2a4a8a';
-    const legW = Math.floor(W * 0.18), legH = Math.floor(H * 0.22);
-    ctx.fillRect(cx - legW - 2, baseY + H * 0.12, legW, legH);
-    ctx.fillRect(cx + 2,        baseY + H * 0.12, legW, legH);
+    if (cls === 'mage') {
+      // ── MAGE — purple robe, wizard hat, staff ──
+      // Robe lower
+      ctx.fillStyle = '#3a1870';
+      ctx.fillRect(Math.floor(cx - W*0.22), Math.floor(baseY + H*0.04), Math.floor(W*0.44), Math.floor(H*0.30));
+      ctx.fillStyle = '#5a28a8';
+      ctx.fillRect(Math.floor(cx - W*0.05), Math.floor(baseY + H*0.05), Math.floor(W*0.10), Math.floor(H*0.28));
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(cx - W*0.24), Math.floor(baseY + H*0.30), Math.floor(W*0.48), 2);
+      // Torso
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(Math.floor(cx - W*0.18), Math.floor(baseY - H*0.18), Math.floor(W*0.36), Math.floor(H*0.24));
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(cx - W*0.07), Math.floor(baseY - H*0.17), Math.floor(W*0.14), 2);
+      // Orb arm (left)
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(Math.floor(cx - W*0.34), Math.floor(baseY - H*0.14), Math.floor(W*0.16), Math.floor(H*0.20));
+      ctx.save(); ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#4488ff';
+      ctx.beginPath(); ctx.arc(Math.floor(cx - W*0.30), Math.floor(baseY + H*0.08), Math.floor(W*0.10), 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#6699ff';
+      ctx.beginPath(); ctx.arc(Math.floor(cx - W*0.30), Math.floor(baseY + H*0.08), Math.floor(W*0.06), 0, Math.PI*2); ctx.fill();
+      // Staff arm (right, animated)
+      ctx.save();
+      ctx.translate(Math.floor(cx + W*0.18), Math.floor(baseY - H*0.14));
+      ctx.rotate(ang);
+      ctx.fillStyle = '#4a20a0';
+      ctx.fillRect(0, 0, Math.floor(W*0.14), Math.floor(H*0.20));
+      ctx.fillStyle = '#4a2e18';
+      ctx.fillRect(Math.floor(W*0.06), -Math.floor(H*0.46), Math.floor(W*0.04), Math.floor(H*0.60));
+      ctx.save(); ctx.globalAlpha = 0.40;
+      ctx.fillStyle = '#cc88ff';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.08), -Math.floor(H*0.48), Math.floor(W*0.08), 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#9b5de5';
+      ctx.beginPath(); ctx.arc(Math.floor(W*0.08), -Math.floor(H*0.48), Math.floor(W*0.055), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#d4aaff'; ctx.fillRect(Math.floor(W*0.06), -Math.floor(H*0.51), 3, 3);
+      ctx.restore();
+      // Head + hat
+      const mhS = Math.floor(W * 0.28);
+      ctx.fillStyle = '#e8d0b0';
+      ctx.fillRect(Math.floor(cx - mhS/2), Math.floor(baseY - H*0.52), mhS, Math.floor(mhS*0.90));
+      ctx.fillStyle = '#4488ff';
+      ctx.fillRect(Math.floor(cx - mhS*0.18), Math.floor(baseY - H*0.44), 3, 2);
+      ctx.fillRect(Math.floor(cx + mhS*0.05), Math.floor(baseY - H*0.44), 3, 2);
+      ctx.fillStyle = '#2a1080';
+      ctx.beginPath();
+      ctx.moveTo(cx, Math.floor(baseY - H*0.72));
+      ctx.lineTo(Math.floor(cx - mhS*0.58), Math.floor(baseY - H*0.52));
+      ctx.lineTo(Math.floor(cx + mhS*0.58), Math.floor(baseY - H*0.52));
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#1e0a50';
+      ctx.fillRect(Math.floor(cx - mhS*0.62), Math.floor(baseY - H*0.53), Math.floor(mhS*1.24), Math.floor(H*0.04));
+      ctx.fillStyle = '#f5c842';
+      ctx.fillRect(Math.floor(cx - 2), Math.floor(baseY - H*0.67), 3, 3);
 
-    // Body
-    const bW = Math.floor(W * 0.44), bH = Math.floor(H * 0.30);
-    ctx.fillStyle = PAL.playerBody;
-    ctx.fillRect(cx - bW / 2, baseY - H * 0.18, bW, bH);
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(cx - bW / 2 + 2, baseY - H * 0.18 + 2, bW - 4, 3);
+    } else if (cls === 'rogue') {
+      // ── ROGUE — dark leather, hood, dagger ──
+      // Legs
+      ctx.fillStyle = '#1a1520';
+      const rLW = Math.floor(W*0.15), rLH = Math.floor(H*0.24);
+      ctx.fillRect(Math.floor(cx - rLW - 3), Math.floor(baseY + H*0.10), rLW, rLH);
+      ctx.fillRect(Math.floor(cx + 3),        Math.floor(baseY + H*0.10), rLW, rLH);
+      ctx.fillStyle = '#181010';
+      ctx.fillRect(Math.floor(cx - rLW - 3), Math.floor(baseY + H*0.26), rLW, Math.floor(H*0.08));
+      ctx.fillRect(Math.floor(cx + 3),        Math.floor(baseY + H*0.26), rLW, Math.floor(H*0.08));
+      // Belt
+      ctx.fillStyle = '#281a0a';
+      ctx.fillRect(Math.floor(cx - W*0.20), Math.floor(baseY + H*0.08), Math.floor(W*0.40), Math.floor(H*0.04));
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(Math.floor(cx - W*0.04), Math.floor(baseY + H*0.07), Math.floor(W*0.08), Math.floor(H*0.05));
+      // Body (dark leather)
+      ctx.fillStyle = '#1c1820';
+      ctx.fillRect(Math.floor(cx - W*0.20), Math.floor(baseY - H*0.18), Math.floor(W*0.40), Math.floor(H*0.28));
+      ctx.fillStyle = '#3a2a20';
+      ctx.fillRect(Math.floor(cx - W*0.03), Math.floor(baseY - H*0.16), Math.floor(W*0.06), Math.floor(H*0.23));
+      // Buckler (left)
+      ctx.fillStyle = '#282028';
+      ctx.beginPath(); ctx.arc(Math.floor(cx - W*0.30), Math.floor(baseY - H*0.04), Math.floor(W*0.09), 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#887060';
+      ctx.fillRect(Math.floor(cx - W*0.31), Math.floor(baseY - H*0.09), 2, Math.floor(H*0.10));
+      ctx.fillRect(Math.floor(cx - W*0.36), Math.floor(baseY - H*0.05), Math.floor(W*0.12), 2);
+      // Dagger arm (right, animated)
+      ctx.save();
+      ctx.translate(Math.floor(cx + W*0.20), Math.floor(baseY - H*0.08));
+      ctx.rotate(ang);
+      ctx.fillStyle = '#1c1820';
+      ctx.fillRect(0, 0, Math.floor(W*0.14), Math.floor(H*0.20));
+      ctx.fillStyle = '#a8b8c8';
+      ctx.fillRect(Math.floor(W*0.03), -Math.floor(H*0.24), Math.floor(W*0.07), Math.floor(H*0.22));
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(-Math.floor(W*0.02), -Math.floor(H*0.03), Math.floor(W*0.18), 2);
+      ctx.fillStyle = '#d8e8f0';
+      ctx.fillRect(Math.floor(W*0.03), -Math.floor(H*0.24), 2, Math.floor(H*0.22));
+      ctx.restore();
+      // Hood + head
+      const rhS = Math.floor(W * 0.32);
+      ctx.fillStyle = '#0e0c16';
+      ctx.beginPath();
+      ctx.moveTo(cx, Math.floor(baseY - H*0.64));
+      ctx.lineTo(Math.floor(cx - rhS*0.56), Math.floor(baseY - H*0.38));
+      ctx.lineTo(Math.floor(cx - rhS*0.50), Math.floor(baseY - H*0.20));
+      ctx.lineTo(Math.floor(cx + rhS*0.50), Math.floor(baseY - H*0.20));
+      ctx.lineTo(Math.floor(cx + rhS*0.56), Math.floor(baseY - H*0.38));
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c8a070';
+      ctx.fillRect(Math.floor(cx - rhS*0.26), Math.floor(baseY - H*0.38), Math.floor(rhS*0.52), Math.floor(H*0.18));
+      ctx.fillStyle = 'rgba(0,0,0,0.80)';
+      ctx.fillRect(Math.floor(cx - rhS*0.26), Math.floor(baseY - H*0.38), Math.floor(rhS*0.52), Math.floor(H*0.10));
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(Math.floor(cx - rhS*0.18), Math.floor(baseY - H*0.36), 3, 2);
+      ctx.fillRect(Math.floor(cx + rhS*0.05), Math.floor(baseY - H*0.36), 3, 2);
 
-    // Left arm
-    const aW = Math.floor(W * 0.16), aH = Math.floor(H * 0.28);
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(cx - bW / 2 - aW, baseY - H * 0.16, aW, aH);
+    } else {
+      // ── WARRIOR — plate armour, helm, sword + shield ──
+      // Legs (greaves over dark trousers)
+      const legW = Math.floor(W * 0.16), legH = Math.floor(H * 0.24);
+      ctx.fillStyle = '#2a4a8a';
+      ctx.fillRect(Math.floor(cx - legW - 3), Math.floor(baseY + H*0.10), legW, legH);
+      ctx.fillRect(Math.floor(cx + 3),         Math.floor(baseY + H*0.10), legW, legH);
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(cx - legW - 3), Math.floor(baseY + H*0.16), legW, Math.floor(legH*0.55));
+      ctx.fillRect(Math.floor(cx + 3),         Math.floor(baseY + H*0.16), legW, Math.floor(legH*0.55));
+      ctx.fillStyle = '#8890a0';
+      ctx.fillRect(Math.floor(cx - legW - 3), Math.floor(baseY + H*0.16), legW, 2);
+      ctx.fillRect(Math.floor(cx + 3),         Math.floor(baseY + H*0.16), legW, 2);
+      // Belt
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(Math.floor(cx - W*0.20), Math.floor(baseY + H*0.08), Math.floor(W*0.40), Math.floor(H*0.04));
+      ctx.fillStyle = '#c89a30';
+      ctx.fillRect(Math.floor(cx - W*0.05), Math.floor(baseY + H*0.07), Math.floor(W*0.10), Math.floor(H*0.05));
+      // Plate torso
+      const bW = Math.floor(W * 0.40), bH = Math.floor(H * 0.28);
+      ctx.fillStyle = '#5c6878';
+      ctx.fillRect(Math.floor(cx - bW/2), Math.floor(baseY - H*0.18), bW, bH);
+      ctx.fillStyle = '#8090a8';
+      ctx.fillRect(Math.floor(cx - 2), Math.floor(baseY - H*0.16), 4, bH - 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(Math.floor(cx - bW/2 + 2), Math.floor(baseY - H*0.18 + 2), bW - 4, 2);
+      ctx.fillStyle = '#404858';
+      ctx.fillRect(Math.floor(cx - bW/2), Math.floor(baseY - H*0.04), bW, 2);
+      // Pauldrons
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(cx - bW/2 - W*0.08), Math.floor(baseY - H*0.20), Math.floor(W*0.10), Math.floor(H*0.12));
+      ctx.fillRect(Math.floor(cx + bW/2 - W*0.02), Math.floor(baseY - H*0.20), Math.floor(W*0.10), Math.floor(H*0.12));
+      ctx.fillStyle = '#8890a8';
+      ctx.fillRect(Math.floor(cx - bW/2 - W*0.08), Math.floor(baseY - H*0.20), Math.floor(W*0.10), 2);
+      ctx.fillRect(Math.floor(cx + bW/2 - W*0.02), Math.floor(baseY - H*0.20), Math.floor(W*0.10), 2);
+      // Shield (left)
+      const aW = Math.floor(W * 0.14);
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(cx - bW/2 - aW), Math.floor(baseY - H*0.14), aW, Math.floor(H*0.22));
+      ctx.fillStyle = '#7890b0';
+      ctx.fillRect(Math.floor(cx - bW/2 - aW - W*0.14), Math.floor(baseY - H*0.22), Math.floor(W*0.14), Math.floor(H*0.28));
+      ctx.strokeStyle = '#40506a'; ctx.lineWidth = 1;
+      ctx.strokeRect(Math.floor(cx - bW/2 - aW - W*0.14), Math.floor(baseY - H*0.22), Math.floor(W*0.14), Math.floor(H*0.28));
+      ctx.fillStyle = '#c89a30';
+      ctx.beginPath(); ctx.arc(Math.floor(cx - bW/2 - aW - W*0.07), Math.floor(baseY - H*0.08), 3, 0, Math.PI*2); ctx.fill();
+      // Sword arm (right, animated)
+      ctx.save();
+      ctx.translate(Math.floor(cx + bW/2), Math.floor(baseY - H*0.10));
+      ctx.rotate(ang);
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(0, 0, aW, Math.floor(H*0.22));
+      ctx.fillStyle = '#b8c8d8';
+      ctx.fillRect(Math.floor(aW*0.40), -Math.floor(H*0.38), 4, Math.floor(H*0.42));
+      ctx.fillStyle = '#dce8f4';
+      ctx.fillRect(Math.floor(aW*0.40), -Math.floor(H*0.38), 2, Math.floor(H*0.42));
+      ctx.fillStyle = '#9b5de5';
+      ctx.fillRect(Math.floor(aW*0.40) - 5, -Math.floor(H*0.02), Math.floor(aW*0.90), 2);
+      ctx.restore();
+      // Head + steel helmet
+      const hS = Math.floor(W * 0.34);
+      ctx.fillStyle = PAL.playerSkin;
+      ctx.fillRect(Math.floor(cx - hS/2), Math.floor(baseY - H*0.52), hS, hS);
+      ctx.fillStyle = '#606878';
+      ctx.fillRect(Math.floor(cx - hS/2 - 1), Math.floor(baseY - H*0.52), hS + 2, Math.floor(hS*0.58));
+      ctx.fillStyle = '#8890a0';
+      ctx.fillRect(Math.floor(cx - hS/2 - 1), Math.floor(baseY - H*0.52), hS + 2, 2);
+      ctx.fillStyle = '#c8c0d0';
+      ctx.fillRect(Math.floor(cx - 2), Math.floor(baseY - H*0.52), 4, Math.floor(hS*0.30));
+      ctx.fillStyle = '#1a2030';
+      ctx.fillRect(Math.floor(cx - hS*0.30), Math.floor(baseY - H*0.38), Math.floor(hS*0.60), 2);
+      ctx.fillStyle = '#f0c840';
+      ctx.fillRect(Math.floor(cx - hS*0.22), Math.floor(baseY - H*0.39), Math.floor(hS*0.16), 1);
+      ctx.fillRect(Math.floor(cx + hS*0.06), Math.floor(baseY - H*0.39), Math.floor(hS*0.16), 1);
+    }
 
-    // Sword arm with swing rotation
-    ctx.save();
-    ctx.translate(cx + bW / 2, baseY - H * 0.08);
-    ctx.rotate(animState ? animState.swingAngle * 0.8 : 0);
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(0, -aH * 0.3, aW, aH);
-    ctx.fillStyle = PAL.playerSword;
-    ctx.fillRect(aW - 2, -aH * 0.8, 4, aH * 1.1);
-    ctx.fillStyle = '#8060a0';
-    ctx.fillRect(aW - 5, -aH * 0.3, 10, 3);
-    ctx.restore();
-
-    // Block head
-    const hS = Math.floor(W * 0.36);
-    ctx.fillStyle = PAL.playerSkin;
-    ctx.fillRect(cx - hS / 2, baseY - H * 0.52, hS, hS);
-    ctx.fillStyle = '#402010';
-    ctx.fillRect(cx - hS * 0.28, baseY - H * 0.38, Math.floor(hS * 0.18), Math.floor(hS * 0.18));
-    ctx.fillRect(cx + hS * 0.10, baseY - H * 0.38, Math.floor(hS * 0.18), Math.floor(hS * 0.18));
-    ctx.fillStyle = PAL.playerHair;
-    ctx.fillRect(cx - hS / 2, baseY - H * 0.52, hS, Math.floor(hS * 0.28));
-
-    // Shield silhouette (left)
-    ctx.fillStyle = '#6688bb';
-    ctx.fillRect(cx - bW / 2 - 4, baseY - H * 0.08, 2, 3);
-    // Sword silhouette (right)
-    ctx.fillStyle = '#c8c8c8';
-    ctx.fillRect(cx + bW / 2 + 2, baseY - H * 0.04, 3, 1);
-
-    // Hurt overlay
+    // Hurt overlay (all classes)
     if(animState && animState.hurtAlpha > 0){
       ctx.save();
       ctx.globalAlpha = animState.hurtAlpha * 0.65;
       ctx.fillStyle = '#ff4444';
-      ctx.fillRect(cx - bW / 2 - 2, baseY - H * 0.52, bW + 4, H * 0.65);
+      ctx.fillRect(Math.floor(cx - W*0.26), Math.floor(baseY - H*0.54), Math.floor(W*0.52), Math.floor(H*0.70));
       ctx.restore();
     }
   },
@@ -4996,7 +5143,7 @@ const AmbientMusic = {
         const osc=ctx.createOscillator(), g=ctx.createGain();
         osc.type='sine'; osc.frequency.value=freqBase; osc.detune.value=detune;
         g.gain.setValueAtTime(0,ctx.currentTime);
-        g.gain.linearRampToValueAtTime(0.4,ctx.currentTime+3);
+        g.gain.linearRampToValueAtTime(0.18,ctx.currentTime+3);
         osc.connect(g); g.connect(this.masterGain);
         osc.start(); this._droneOscs.push(osc);
       }catch(e){}
@@ -5088,8 +5235,8 @@ const BattleMusic = {
       const d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 8);
       const src = ac.createBufferSource(); src.buffer = buf;
-      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
-      const eg = ac.createGain(); eg.gain.setValueAtTime(1.5, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 200;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(0.75, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
       src.connect(lp); lp.connect(eg); eg.connect(mg); src.start(when);
     }
     if (step === 4 || step === 12) {
@@ -5114,8 +5261,8 @@ const BattleMusic = {
     if (step % 2 === 0) {
       const osc = ac.createOscillator(); osc.type = 'sawtooth';
       osc.frequency.value = bassNotes[step];
-      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320;
-      const eg = ac.createGain(); eg.gain.setValueAtTime(0.45, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 400;
+      const eg = ac.createGain(); eg.gain.setValueAtTime(0.20, when); eg.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
       osc.connect(lp); lp.connect(eg); eg.connect(mg); osc.start(when); osc.stop(when + 0.30);
     }
     if (step % 3 === 0) {
